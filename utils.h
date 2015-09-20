@@ -48,6 +48,7 @@ typedef struct crdata_t
 
 typedef struct cache_req_t
 {
+  i32 valid;
   i32 ismem;
   i32 isRead;
   i32 addr;

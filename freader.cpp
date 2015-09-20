@@ -72,7 +72,7 @@ cache_req* freader::read_trace(){
     // else do nothing
 
     //printf("%s\t%08X\t%llX\n", buf1, addr, value);
-    req->isRead = strncmp(buf1, "read", 4);
+    req->isRead = strncmp(buf1, "r", 4);
   }else{
     return NULL;
   }

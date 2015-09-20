@@ -258,6 +258,7 @@ i32 tcache::refill(cache_block* bp, i32 addr){
   i32 i, index, tag, zero, delay;
   tag = (addr >> (bshift + ishift)); 
   index = (addr >> bshift) & imask;
+  zero = 1;
   
   bp->tag = tag;
   bp->valid = 1;
@@ -270,8 +271,7 @@ i32 tcache::refill(cache_block* bp, i32 addr){
     }
   }
 
-  // update maps on eviction
-  if (map != 0){
+  if ((map != 0) && (map->get_enabled())){
     zero = map->lookup(addr);
   }
 
