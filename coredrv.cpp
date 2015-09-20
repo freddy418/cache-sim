@@ -113,7 +113,7 @@ i32 coredrv::clock(i64 curr_ck){
     }
 
     // clear stats collected during warmup
-    if (fr == 0 && curr_req.valid == 1){
+    if ((fr == 0 && curr_req.valid == 1) || (fr != 0)){
       accesses++;
     }
     if (fr!=0 && accesses % 1000000 == 0){
