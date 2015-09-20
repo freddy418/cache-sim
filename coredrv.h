@@ -21,6 +21,7 @@ typedef struct core_args_t {
   char * name;
   std::queue<cache_req*>* qp;
   tmemory* sp;
+  freader* fr;
 } core_args;
 
 class coredrv {
@@ -37,6 +38,7 @@ class coredrv {
   tcache* dl2;
   mem_map* mp;
   freader* fr;
+  i32 done;
   std::queue<cache_req*>* qp;
   tmemory* sp;
   // for performance
@@ -62,6 +64,7 @@ public:
   void stats();
   i32 clock(i32 curr_ck);
   i32 get_accs();
+  void set_done();
 };
 
 #endif /* COREDRV_H */

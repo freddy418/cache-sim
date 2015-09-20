@@ -19,11 +19,13 @@ int main(int argc, char** argv){
     i32 mret = 0;
     i64 curr_ck = 0;
     char* names[2] = {"CORE", "MONITOR"};
+    freader* fr = new freader(atoi(argv[2]), argv[8], argv[9]);
 
     cas->taggran = atoi(argv[1]);
     cas->tagsize = cas->taggran; //atoi(argv[2]);
     cas->mapon = 0; //atoi(argv[3]);
     cas->assoc = 16; //atoi(argv[4]);
+    cas->pagesize = 4096;
     cas->sets = 1024; //atoi(argv[5]);
     cas->bsize = 64; //atoi(argv[6]);
     cas->skip = atoi(argv[7]) * 1000000;
@@ -31,9 +33,8 @@ int main(int argc, char** argv){
     cas->bench = argv[9];
     cas->qp = &iq;
     cas->name = names[0];
-    cas->pagesize = 4096;
+    cas->fr = fr;
 
-    freader* fr = new freader(atoi(argv[2]), argv[8], argv[9]);
     tmemory* sp = new tmemory(cas->taggran, cas->tagsize);
     cas->sp = sp;
 
@@ -41,17 +42,19 @@ int main(int argc, char** argv){
     mas->tagsize = atoi(argv[2]);
     mas->mapon = atoi(argv[3]);
     mas->assoc = atoi(argv[4]);
+    cas->pagesize = 4096;
     mas->sets = atoi(argv[5]);
     mas->bsize = atoi(argv[6]);
     mas->skip = atoi(argv[7]) * 1000000;
     mas->qp = &iq;
     mas->sp = sp;
     mas->name = names[1];
+    mas->fr = 0;
 
     coredrv* core = new coredrv(cas);
     coredrv* monitor = new coredrv(mas);
 
-    while (cret == 0 && mret == 0){
+    while (cret == 0 || mret == 0){
       if (cret == 0){
 	cret = core->clock(curr_ck);
       }

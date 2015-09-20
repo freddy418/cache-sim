@@ -15,7 +15,9 @@ coredrv::coredrv(core_args* args){
   qp = ((core_args*)args)->qp;
   sp = ((core_args*)args)->sp;
   name = ((core_args*)args)->name;
+  fr = ((core_args*)args)->fr;
   pmask = ~((1 << (int)(log2(pagesize) - (6-log2(taggran))-(6-log2(tagsize)))) - 1);
+  done = 0;
   
   accesses = 0;
   // cache delay counters
@@ -101,6 +103,10 @@ i32 coredrv::clock(i32 curr_ck){
 	curr_req.valid = req->ismem;
 	curr_req.inprogress = 0;
 	qp->pop();
+      }else{
+	if (done == 1){
+	  return 1;
+	}
       }
     }else{
       printf("Error: Simulation driver sees no trace and no instruction queue\n");
@@ -229,6 +235,9 @@ i32 coredrv::clock(i32 curr_ck){
       }
     }
   }
+
+  // nothing happened
+  return 0;
 }
 
 void coredrv::stats(){
@@ -257,4 +266,8 @@ void coredrv::stats(){
 
 i32 coredrv::get_accs(){
   return accesses;
+}
+
+void coredrv::set_done(){
+  done = 1;
 }
