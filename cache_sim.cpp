@@ -73,7 +73,7 @@ int main(int argc, char** argv){
       curr_ck++;
     }
 
-    printf("Core Simulation complete after %u core accesses and %u monitor accesses and %u simulated cycles\n", core->get_accs(), monitor->get_accs(), curr_ck);
+    printf("Core Simulation complete after %u core accesses and %u monitor accesses and %llu simulated cycles\n", core->get_accs(), monitor->get_accs(), curr_ck);
     
     // cleanup
     free(cas);

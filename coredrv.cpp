@@ -34,7 +34,7 @@ coredrv::coredrv(core_args* args){
   printf("MDCacheSim (last updated 3-14-15):\n");
   printf("Tag Size and Granularity: %u-bit tag per %s\n", tagsize, (taggran==8)?"byte":(taggran==32)?"word":"doubleword");
   printf("Optimizations: Locality %s\n", (mapon==1)?"on":"off");
-  printf("Page Size=%lu and Page Mask=%x\n", pagesize, pmask); 
+  printf("Page Size=%u and Page Mask=%x\n", pagesize, pmask); 
 
   // initialize cache and local variables;
   dl1 = new tcache(64, 4, bsize, taggran, tagsize, L1DELAY, L2DELAY);
@@ -143,7 +143,6 @@ i32 coredrv::clock(i32 curr_ck){
       if (qp->size() < QSIZE){ // prepare new queue packet
 	temp_req = new cache_req();
 	temp_req->ismem = 0;
-	temp_req->valid = 1;
       }else{
 	qstallcyc++; // count when queue is full
 	return 0;
@@ -259,8 +258,8 @@ void coredrv::stats(){
     printf("%llu instructions commmited in %llu cycles\n", curr_ic-warm_ic, clocks-warm_ck);
     printf("Simulated IPC: %1.3f\n", (float)(curr_ic-warm_ic)/(clocks-warm_ck));
     printf("%u Total memory stall cycles: %u 1cycle, %u 20cycles, %u 200cycles\n", m1cyc+m20cyc+m200cyc, m1cyc, m20cyc, m200cyc);
-    printf("%u Queue full stall cycles\n", qstallcyc);
-    printf("%u Non-memory instructions in traces\n", totaligap);
+    printf("%llu Queue full stall cycles\n", qstallcyc);
+    printf("%llu Non-memory instructions in traces\n", totaligap);
   }
 }
 

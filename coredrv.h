@@ -51,13 +51,13 @@ class coredrv {
   i32 m1cyc;
   i32 m20cyc;
   i32 m200cyc;
-  i32 qstallcyc;
-  i32 totaligap;
-  i32 lastic;
+  i64 qstallcyc;
+  i64 totaligap;
+  i64 lastic;
   i32 accesses;
   i64 warm_ic;
   i64 warm_ck;
-  i32 clocks;
+  i64 clocks;
   cache_req* temp_req;
 public:
   coredrv(core_args* args);
