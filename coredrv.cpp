@@ -238,7 +238,11 @@ i32 coredrv::clock(i64 curr_ck){
     }
   }
 
-  // stall cycle
+  if (fr != 0){
+    printf("Should not be having this stall, what happened?");
+    assert(0);
+  }
+  // is this legal?
   return 0;
 }
 
