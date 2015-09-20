@@ -235,6 +235,7 @@ i32 coredrv::clock(i64 curr_ck){
 	temp_req->addr = curr_req.addr;
 	temp_req->value = curr_req.value;
       }
+      return 0;
     }
   }
 
