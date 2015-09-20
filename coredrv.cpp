@@ -239,7 +239,7 @@ i32 coredrv::clock(i64 curr_ck){
   }
 
   if (fr != 0 && curr_req.inprogress == 0){
-    printf("Stall for %s when curr_req.valid is %d, curr_ic is %llu, fill_cycle is %llu, curr_ck is %llu, queue entries is %u\n", name, curr_req.valid, curr_ic, curr_req.fill_cycle, curr_ck, qp->size());
+    printf("Stall for %s when curr_req.valid is %d, curr_ic is %llu, fill_cycle is %llu, curr_ck is %llu, queue entries is %lu\n", name, curr_req.valid, curr_ic, curr_req.fill_cycle, curr_ck, qp->size());
   }
   // is this legal?
   return 0;
