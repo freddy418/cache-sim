@@ -60,6 +60,7 @@ int main(int argc, char** argv){
       }
       if (cret == 1){
 	core->stats();
+	monitor->set_done();
       }
       if (mret == 0){
 	mret = monitor->clock(curr_ck);
