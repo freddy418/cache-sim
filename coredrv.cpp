@@ -263,7 +263,7 @@ void coredrv::stats(){
   if (fr != 0){
     printf("%llu instructions commmited in %llu cycles\n", curr_ic-warm_ic, clocks-warm_ck);
     printf("Simulated IPC: %1.3f\n", (float)(curr_ic-warm_ic)/(clocks-warm_ck));
-    printf("%u Total memory stall cycles: %u 1cycle, %u 20cycles, %u 200cycles\n", m1cyc+m20cyc+m200cyc, m1cyc, m20cyc, m200cyc);
+    printf("%u Total memory stall cycles: %u 1cycle, %u 20cycles, %u 200cycles\n", m1cyc+m20cyc*20+m200cyc*200, m1cyc, m20cyc, m200cyc);
     printf("%llu Queue full stall cycles\n", qstallcyc);
     printf("%llu Non-memory instructions in traces\n", totaligap);
   }
