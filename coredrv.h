@@ -62,7 +62,7 @@ class coredrv {
 public:
   coredrv(core_args* args);
   void stats();
-  i32 clock(i32 curr_ck);
+  i32 clock(i64 curr_ck);
   i32 get_accs();
   void set_done();
 };

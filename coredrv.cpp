@@ -54,7 +54,7 @@ coredrv::coredrv(core_args* args){
   temp_req = 0;
 }
 
-i32 coredrv::clock(i32 curr_ck){
+i32 coredrv::clock(i64 curr_ck){
   if ((curr_req.valid == 1) && (curr_req.inprogress == 1) && (curr_req.fill_cycle <= curr_ck)){
     curr_req.valid = 0;
   }
