@@ -240,7 +240,7 @@ i32 coredrv::clock(i64 curr_ck){
   }
 
   if (fr != 0){
-    printf("Stall for %s when curr_req.valid is %d, fill_cycle is %llu and curr_ck is %llu\n", name, curr_req.valid, curr_req.fill_cycle, curr_ck);
+    printf("Stall for %s when curr_req.valid is %d, curr_ic is %llu, fill_cycle is %llu and curr_ck is %llu\n", name, curr_req.valid, curr_ic, curr_req.fill_cycle, curr_ck);
     assert(0);
   }
   // is this legal?
