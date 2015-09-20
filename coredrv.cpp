@@ -143,6 +143,7 @@ i32 coredrv::clock(i64 curr_ck){
       if (qp->size() < QSIZE){ // prepare new queue packet
 	temp_req = new cache_req();
 	temp_req->ismem = 0;
+	temp_req->valid = 1;
       }else{
 	qstallcyc++; // count when queue is full
 	return 0;
