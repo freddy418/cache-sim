@@ -113,7 +113,9 @@ i32 coredrv::clock(i64 curr_ck){
     }
 
     // clear stats collected during warmup
-    accesses++;
+    if (fr == 0 && curr_req.valid == 1){
+      accesses++;
+    }
     if (fr!=0 && accesses % 1000000 == 0){
       fprintf(stderr, "Now at %u accesses in the monitored application\n", accesses);
     }
