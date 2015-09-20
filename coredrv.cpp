@@ -69,17 +69,16 @@ i32 coredrv::clock(i32 curr_ck){
     cache_req* req = NULL;
     if (fr != 0){ // core reads from trace
       req = fr->fread(); //read next line from trace
-      if (req == NULL){
-	// core done;
-	clocks = curr_ck;
+      if (req == NULL){ // termination condition for core
+	clocks = curr_ck; // no more entries in trace
 	return 1;
       }else{
 	curr_req.icount = req->icount;
 	curr_req.addr = req->addr;
 	curr_req.isRead = req->isRead;
 	curr_req.value = req->value;
-	curr_req.inprogress = 0;
 	curr_req.valid = 1;
+	curr_req.inprogress = 0;
 	free(req);
 	// count the gap (for understanding cycle count)
 	if ((req->icount - lastic) > 1){
@@ -104,8 +103,8 @@ i32 coredrv::clock(i32 curr_ck){
 	curr_req.inprogress = 0;
 	qp->pop();
       }else{
-	if (done == 1){
-	  return 1;
+	if (done == 1){ // termination condition for monitor
+	  return 1; // queue is empty and core is done queueing
 	}
       }
     }else{
@@ -115,7 +114,7 @@ i32 coredrv::clock(i32 curr_ck){
 
     // clear stats collected during warmup
     accesses++;
-    if (fr!=0 && accesses % 10000000 == 0){
+    if (fr!=0 && accesses % 1000000 == 0){
       fprintf(stderr, "Now at %u accesses in the monitored application\n", accesses);
     }
     if (accesses == skip){
@@ -138,8 +137,7 @@ i32 coredrv::clock(i32 curr_ck){
       }
     }
   }
-  
-    
+
   if (curr_req.valid == 1){
     if (fr != 0){
       if (qp->size() < QSIZE){ // prepare new queue packet
@@ -150,7 +148,7 @@ i32 coredrv::clock(i32 curr_ck){
 	qstallcyc++; // count when queue is full
 	return 0;
       }
-      if (curr_req.icount != curr_ic && !(curr_req.icount == curr_ic+1 && curr_req.inprogress == 0)){
+      if ((curr_req.icount > curr_ic) && !(curr_req.icount == curr_ic+1 && curr_req.inprogress == 0)){
 	curr_ic++;
 	return 0;
       }
@@ -226,6 +224,8 @@ i32 coredrv::clock(i32 curr_ck){
       }
       curr_req.fill_cycle = curr_ck + delay - 1;
       curr_req.inprogress = 1;
+
+      // finish preparation of core->monitor queue packet
       if (fr != 0){
 	curr_ic = curr_req.icount; // don't insert stall between consecutive instructions      
 	temp_req->ismem = 1;
@@ -236,7 +236,7 @@ i32 coredrv::clock(i32 curr_ck){
     }
   }
 
-  // nothing happened
+  // stall cycle
   return 0;
 }
 

@@ -20,6 +20,7 @@ int main(int argc, char** argv){
     i64 curr_ck = 0;
     char* names[2] = {"CORE", "MONITOR"};
     freader* fr = new freader(atoi(argv[2]), argv[8], argv[9]);
+    bool cp = false;
 
     cas->taggran = atoi(argv[1]);
     cas->tagsize = cas->taggran; //atoi(argv[2]);
@@ -58,9 +59,10 @@ int main(int argc, char** argv){
       if (cret == 0){
 	cret = core->clock(curr_ck);
       }
-      if (cret == 1){
+      if (cret == 1 && cp == false){
 	core->stats();
 	monitor->set_done();
+	cp = true;
       }
       if (mret == 0){
 	mret = monitor->clock(curr_ck);
@@ -71,7 +73,7 @@ int main(int argc, char** argv){
       curr_ck++;
     }
 
-    printf("Core Simulation complete after %u core accesses and %u monitor accesses\n", core->get_accs(), monitor->get_accs());
+    printf("Core Simulation complete after %u core accesses and %u monitor accesses and %u simulated cycles\n", core->get_accs(), monitor->get_accs(), curr_ck);
     
     // cleanup
     free(cas);
