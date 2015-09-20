@@ -42,7 +42,7 @@ int main(int argc, char** argv){
     mas->tagsize = atoi(argv[2]);
     mas->mapon = atoi(argv[3]);
     mas->assoc = atoi(argv[4]);
-    cas->pagesize = 4096;
+    mas->pagesize = 4096;
     mas->sets = atoi(argv[5]);
     mas->bsize = atoi(argv[6]);
     mas->skip = atoi(argv[7]) * 1000000;
