@@ -23,6 +23,7 @@ typedef unsigned long long i64;
 #define L1DELAY 1
 #define L2DELAY 20
 #define MEMDELAY 200
+#define QSIZE 16
 
 // lru implementation
 typedef struct llnode {
@@ -89,6 +90,5 @@ typedef struct range_cache_entry {
   i32 dirty;
   i32 valid;
 } rc_ent;
-
 
 #endif /* UTILS_H */
