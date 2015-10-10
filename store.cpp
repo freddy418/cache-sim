@@ -15,6 +15,17 @@ tmemory::tmemory(i32 tg, i32 ts){
   //printf("Leaving create_memory\n");
 }
 
+i64 tmemory::load(){
+  i64 delay = MEMDELAY;
+  i64 busy = nextfree-curr_ck;
+  if (curr_ck < nextfree){
+    delay += busy;
+  }
+  nextfree = curr_ck + delay;
+  //printf("memory now return %llu cycle delay: nextfree=%llu, curr_ck=%llu\n", delay, nextfree, curr_ck);
+  return delay;
+}
+
 i64 tmemory::read(i32 addr){
   //printf("Entering mem_read\n");
   i32 fnum = (addr >> pshift) & pmask;

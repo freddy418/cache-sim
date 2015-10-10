@@ -11,6 +11,7 @@ typedef struct core_args_t {
   i32 taggran;
   i32 tagsize;
   i32 pagesize;
+  i32 rdalloc;
   i32 mapon;
   i32 assoc;
   i32 sets;
@@ -28,6 +29,7 @@ class coredrv {
   i32 taggran;
   i32 tagsize;
   i32 mapon;
+  i32 rdalloc;
   i32 sets;
   i32 bsize;
   i32 assoc;
@@ -51,6 +53,8 @@ class coredrv {
   i32 m1cyc;
   i32 m20cyc;
   i32 m200cyc;
+  i32 m300cyc;
+  i32 m300pcyc;
   i64 qstallcyc;
   i64 totaligap;
   i64 lastic;
@@ -62,7 +66,7 @@ class coredrv {
 public:
   coredrv(core_args* args);
   void stats();
-  i32 clock(i64 curr_ck);
+  i32 clock();
   i32 get_accs();
   void set_done();
 };

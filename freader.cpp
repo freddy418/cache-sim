@@ -63,8 +63,7 @@ cache_req* freader::read_trace(){
 	req->value = strtoull(vstr, NULL, 16);
 	//printf("%llX converted to %lx - high(%X) low(%X)\n", origval, value, high, low);
       }
-    }
-    else if (tagsize == 1){
+    } else if (tagsize == 1){
       if (req->value != 0){
 	req->value = 1;
       }

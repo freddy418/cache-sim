@@ -14,11 +14,12 @@
 #include <algorithm>
 #include <cassert>
 #include <queue>
-
-extern unsigned int totalaccs;
+#include <algorithm>
 
 typedef unsigned int i32;
 typedef unsigned long long i64;
+
+extern i64 curr_ck;
 
 #define L1DELAY 1
 #define L2DELAY 20

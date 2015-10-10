@@ -307,7 +307,7 @@ if ((addr & amask) + (i<<oshift) == DBG_ADDR){
 	//printf("REFILL (%X): Reading mem addr (%X), data(%llX)\n", addr, ((addr&amask)+(i<<oshift)), bp->value[i]);
       }
       bwused += bsize;
-      delay = MEMDELAY;
+      delay = mem->load();
     }else{
       for (i=0;i<bvals;i++){
         bp->value[i] = 0;

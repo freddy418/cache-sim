@@ -4,6 +4,7 @@ coredrv::coredrv(core_args* args){
   // read input arguments
   taggran = ((core_args*)args)->taggran;
   tagsize = ((core_args*)args)->tagsize;
+  rdalloc = ((core_args*)args)->rdalloc;
   mapon = ((core_args*)args)->mapon;
   assoc = ((core_args*)args)->assoc;
   pagesize = ((core_args*)args)->pagesize;
@@ -24,6 +25,8 @@ coredrv::coredrv(core_args* args){
   m1cyc = 0;
   m20cyc = 0;
   m200cyc = 0;
+  m300cyc = 0;
+  m300pcyc = 0;
   // misc stall counters
   qstallcyc = 0;
   totaligap = 0;
@@ -33,7 +36,7 @@ coredrv::coredrv(core_args* args){
   // "I'm alive print out"
   printf("MDCacheSim (last updated 3-14-15):\n");
   printf("Tag Size and Granularity: %u-bit tag per %s\n", tagsize, (taggran==8)?"byte":(taggran==32)?"word":"doubleword");
-  printf("Optimizations: Locality %s\n", (mapon==1)?"on":"off");
+  printf("Optimizations: Locality %s, Read Allocate %s\n", (mapon==1)?"on":"off", (rdalloc==1)?"on":"off");
   printf("Page Size=%u and Page Mask=%x\n", pagesize, pmask); 
 
   // initialize cache and local variables;
@@ -54,7 +57,7 @@ coredrv::coredrv(core_args* args){
   temp_req = 0;
 }
 
-i32 coredrv::clock(i64 curr_ck){
+i32 coredrv::clock(){
   if ((curr_req.valid == 1) && (curr_req.inprogress == 1) && (curr_req.fill_cycle <= curr_ck)){
     curr_req.valid = 0;
   }
@@ -102,6 +105,7 @@ i32 coredrv::clock(i64 curr_ck){
 	curr_req.valid = req->ismem;
 	curr_req.inprogress = 0;
 	qp->pop();
+	free(req);
       }else{
 	if (done == 1){ // termination condition for monitor
 	  return 1; // queue is empty and core is done queueing
@@ -116,9 +120,9 @@ i32 coredrv::clock(i64 curr_ck){
     if ((fr == 0 && curr_req.valid == 1) || (fr != 0)){
       accesses++;
     }
-    if (fr!=0 && accesses % 1000000 == 0){
+    /*if (fr!=0 && accesses % 1000000 == 0){
       fprintf(stderr, "Now at %u accesses in the monitored application\n", accesses);
-    }
+      }*/
     if (accesses == skip){
       dl1->clearstats();
       dl2->clearstats();
@@ -132,6 +136,8 @@ i32 coredrv::clock(i64 curr_ck){
 	m1cyc = 0;
 	m20cyc = 0;
 	m200cyc = 0;
+	m300cyc = 0;
+	m300pcyc = 0;
 	qstallcyc = 0;
 	totaligap = 0;
       }else{
@@ -171,7 +177,31 @@ i32 coredrv::clock(i64 curr_ck){
       
       if (curr_req.isRead == 0){
 	// check the map first
-	if (zero == 1){
+	if (rdalloc == 0){
+	  if (zero == 1){
+	    crdata rdata = dl1->read(curr_req.addr);
+	    sval = rdata.value;
+	    delay = rdata.delay;
+	    if (fr != 0){
+	      if (delay == 1){
+		m1cyc++;
+	      }	else if (delay == 20){
+		m20cyc++;
+	      } else if (delay == 200){
+		m200cyc++;
+	      } else if (delay <= 300){
+		m300cyc++;
+	      } else if (delay > 300){
+		m300pcyc++;
+	      } else {
+		printf("Delay of %u cycles unaccounted for\n", delay);
+		assert(0);
+	      }
+	    }
+	  }else{
+	    sval = 0;
+	  }
+	}else{
 	  crdata rdata = dl1->read(curr_req.addr);
 	  sval = rdata.value;
 	  delay = rdata.delay;
@@ -182,20 +212,21 @@ i32 coredrv::clock(i64 curr_ck){
 	      m20cyc++;
 	    } else if (delay == 200){
 	      m200cyc++;
+	    } else if (delay <= 300){
+	      m300cyc++;
+	    } else if (delay > 300){
+	      m300pcyc++;
 	    } else {
-	      printf("Unexpected access delay of %u on memory request\n", delay);
+	      printf("Delay of %u cycles unaccounted for\n", delay);
 	      assert(0);
 	    }
-	  }  
-	}else{
-	  sval = 0;
+	  }
 	}
 	if (sval != curr_req.value){
 	  //printf("Access(%u): Store and trace unmatched for addr (%X): s(%llX), t(%llX)\n", coreaccs, addr, sval, value);
 	  //assert(0);
-	  mismatches++;
 	  // fix up to prevent later mismatches
-	  if (sval == 0){
+	  if ((sval == 0) && (rdalloc == 0)){
 	    if (mp != 0 && mp->get_enabled()){
 	      mp->update_block(curr_req.addr, 1);
 	    }
@@ -208,6 +239,7 @@ i32 coredrv::clock(i64 curr_ck){
 	    dl1->set_hits(dl1->get_hits()-1);
 	    dl1->set_accs(dl1->get_accs()-1);
 	  }
+	  mismatches++;
 	}else{
 	  if (sval == 0 && zero == 0 && mp != 0 && mp->get_enabled()){
 	    mp->get_tlb()->zeros++;
@@ -217,7 +249,7 @@ i32 coredrv::clock(i64 curr_ck){
 	  mismaps++;
 	}
       }else{
-	if (zero == 0 && mp != 0 && mp->get_enabled()){
+	if (zero == 0 && mp != 0 && mp->get_enabled() && rdalloc == 0){
 	  mp->update_block(curr_req.addr, 1);
 	  //printf("Calling cache_allocate for %08X\n", addr);
 	  dl1->allocate(curr_req.addr); // special function to allocate a cache line with all zero
