@@ -30,9 +30,11 @@ int main(int argc, char** argv){
     cas->tagsize = cas->taggran; //atoi(argv[2]);
     cas->rdalloc = 1;
     cas->mapon = 0; //atoi(argv[4]);
-    cas->assoc = 16; //atoi(argv[5]);
     cas->pagesize = 4096;
-    cas->sets = 1024; //atoi(argv[6]);
+    cas->l1assoc = 4;
+    cas->l1sets = 64;
+    cas->l2assoc = 16; //atoi(argv[5]);
+    cas->l2sets = 1024; //atoi(argv[6]);
     cas->bsize = 64; //atoi(argv[7]);
     cas->skip = atoi(argv[8]) * 1000000;
     cas->dir = argv[9];
@@ -48,9 +50,11 @@ int main(int argc, char** argv){
     mas->tagsize = atoi(argv[2]);
     mas->rdalloc = atoi(argv[3]);
     mas->mapon = atoi(argv[4]);
-    mas->assoc = atoi(argv[5]);
     mas->pagesize = 4096;
-    mas->sets = atoi(argv[6]);
+    mas->l1assoc = 2;
+    mas->l1sets = 32;
+    mas->l2assoc = atoi(argv[5]);
+    mas->l2sets = atoi(argv[6]);
     mas->bsize = atoi(argv[7]);
     mas->skip = atoi(argv[8]) * 1000000;
     mas->qp = &iq;

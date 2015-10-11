@@ -6,9 +6,11 @@ coredrv::coredrv(core_args* args){
   tagsize = ((core_args*)args)->tagsize;
   rdalloc = ((core_args*)args)->rdalloc;
   mapon = ((core_args*)args)->mapon;
-  assoc = ((core_args*)args)->assoc;
   pagesize = ((core_args*)args)->pagesize;
-  sets = ((core_args*)args)->sets;
+  l1assoc = ((core_args*)args)->l1assoc;
+  l1sets = ((core_args*)args)->l1sets;
+  l2assoc = ((core_args*)args)->l2assoc;
+  l2sets = ((core_args*)args)->l2sets;
   bsize = ((core_args*)args)->bsize;
   skip = ((core_args*)args)->skip;
   //dir = ((core_args*)args)->dir;
@@ -40,8 +42,8 @@ coredrv::coredrv(core_args* args){
   printf("Page Size=%u and Page Mask=%x\n", pagesize, pmask); 
 
   // initialize cache and local variables;
-  dl1 = new tcache(64, 4, bsize, taggran, tagsize, L1DELAY, L2DELAY);
-  dl2 = new tcache(sets, assoc, bsize, taggran, tagsize, L2DELAY, MEMDELAY);
+  dl1 = new tcache(l1sets, l1assoc, bsize, taggran, tagsize, L1DELAY, L2DELAY);
+  dl2 = new tcache(l2sets, l2assoc, bsize, taggran, tagsize, L2DELAY, MEMDELAY);
   mp = new mem_map(mapon, pagesize, bsize, 32, taggran, tagsize); // added enable (0-off,1-on)
 
   dl1->set_nl(dl2);

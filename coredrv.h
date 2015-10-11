@@ -13,8 +13,10 @@ typedef struct core_args_t {
   i32 pagesize;
   i32 rdalloc;
   i32 mapon;
-  i32 assoc;
-  i32 sets;
+  i32 l1assoc;
+  i32 l1sets;
+  i32 l2assoc;
+  i32 l2sets;
   i32 bsize;
   i32 skip;
   char * dir;
@@ -30,9 +32,11 @@ class coredrv {
   i32 tagsize;
   i32 mapon;
   i32 rdalloc;
-  i32 sets;
+  i32 l1assoc;
+  i32 l1sets;
+  i32 l2assoc;
+  i32 l2sets;
   i32 bsize;
-  i32 assoc;
   i32 pmask;
   i32 skip;
   i32 pagesize;
