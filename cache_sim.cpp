@@ -31,10 +31,10 @@ int main(int argc, char** argv){
     cas->rdalloc = 1;
     cas->mapon = 0; //atoi(argv[4]);
     cas->pagesize = 4096;
-    cas->l1assoc = 8;
+    cas->l1assoc = 6;
     cas->l1sets = 64;
-    cas->l2assoc = 16; //atoi(argv[5]);
-    cas->l2sets = 2048; //atoi(argv[6]);
+    cas->l2assoc = 8; //atoi(argv[5]);
+    cas->l2sets = 1024; //atoi(argv[6]);
     cas->bsize = 64; //atoi(argv[7]);
     cas->skip = atoi(argv[8]) * 1000000;
     cas->dir = argv[9];

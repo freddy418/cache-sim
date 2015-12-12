@@ -104,16 +104,16 @@ i32 mem_map::lookup(i32 addr){
     hitway = tlb->lru->val;
     if (tlb->entries[hitway].dirty == 1){
       // TODO: write this dirty line to L2 TLB
-      tlb->total_energy += (TLB1RE) << enabled; // writeback read energy
+      tlb->total_energy += (TLB1RE) * (enabled+1); // writeback read energy
       tlb->entries[hitway].dirty = 0;
     }
     tlb->entries[hitway].entry = lookup2(addr); //&(mapents[tag]);
     tlb->entries[hitway].tag = tag;
     tlb->entries[hitway].valid = 1;
-    tlb->total_energy += TLB1WE << enabled; // refill energy
+    tlb->total_energy += TLB1WE * (enabled+1); // refill energy
   }
   update_lru(tlb, hitway);
-  tlb->total_energy += TLB1RE << enabled; // read energy
+  tlb->total_energy += TLB1RE * (enabled+1); // read energy
   tlb->accs++;
 
   //printf("Map lookup for addr: %X, hitway: %u, block: %u, bv: %X, result: %u\n", addr,  hitway, block, tlb->entries[hitway]->zero, ((tlb->entries[hitway]->zero >> block) & 1));
@@ -160,7 +160,7 @@ map_entry* mem_map::lookup2(i32 addr){
     hitway = tlb2->lru->val;
     if (tlb2->entries[hitway].dirty == 1){
       bwused += 8;
-      tlb2->total_energy += (TLB2RE) << enabled; // writeback read energy
+      tlb2->total_energy += (TLB2RE) * (enabled+1); // writeback read energy
       if (enabled == 1){
 	bwused += bvsize; // write through bandwidth usage
       }
@@ -169,7 +169,7 @@ map_entry* mem_map::lookup2(i32 addr){
     tlb2->entries[hitway].entry = &(mapents[tag]);
     tlb2->entries[hitway].tag = tag;
     tlb2->entries[hitway].valid = 1;
-    tlb2->total_energy += TLB2WE << enabled; // refill write energy
+    tlb2->total_energy += TLB2WE * (enabled+1); // refill write energy
     bwused += 8;
     if (enabled == 1){
       bwused += bvsize;
@@ -187,7 +187,7 @@ map_entry* mem_map::lookup2(i32 addr){
   //printf("Map lookup for addr: %X, hitway: %u, block: %u, bv: %X, result: %u\n", addr,  hitway, block, tlb->entries[hitway]->zero, ((tlb->entries[hitway]->zero >> block) & 1));
   //printf("bshift: %u, bmask: %x\n", bshift, bmask);
 
-  tlb2->total_energy += TLB2RE << enabled; // actual read energy
+  tlb2->total_energy += TLB2RE * (enabled+1); // actual read energy
   return (tlb2->entries[hitway].entry);
 }
 
@@ -212,7 +212,7 @@ void mem_map::insert2(i32 tag){
     hitway = tlb2->lru->val;
     if (tlb2->entries[hitway].dirty == 1){
       bwused += 8;
-      tlb2->total_energy += (TLB2RE) << enabled;  // writeback read energy
+      tlb2->total_energy += (TLB2RE) * (enabled+1);  // writeback read energy
       if (enabled == 1){
 	bwused += bvsize; // write through bandwidth usage
       }
@@ -221,14 +221,14 @@ void mem_map::insert2(i32 tag){
     tlb2->entries[hitway].entry = &(mapents[tag]);
     tlb2->entries[hitway].tag = tag;
     tlb2->entries[hitway].valid = 1;
-    tlb2->total_energy += TLB2WE << enabled; // refill write energy
+    tlb2->total_energy += TLB2WE * (enabled+1); // refill write energy
     bwused += 8;
     if (enabled == 1){
       bwused += bvsize;
     }
   }
   update_lru(tlb2, hitway);
-  tlb2->total_energy += TLB2WE << enabled; //  actual write energy
+  tlb2->total_energy += TLB2WE * (enabled+1); //  actual write energy
   tlb2->entries[hitway].dirty = 1;
   tlb2->accs++;
 }
@@ -265,7 +265,7 @@ i32 mem_map::update_block(i32 addr, i32 zero){
     hitway = tlb->lru->val;
     if (tlb->entries[hitway].dirty == 1){
       // read out L1 TLB entry
-      tlb->total_energy += (TLB1RE) << enabled; // writeback read energy
+      tlb->total_energy += (TLB1RE) * (enabled+1); // writeback read energy
       // write to L2 TLB
       insert2(tlb->entries[hitway].tag);
       tlb->entries[hitway].dirty = 0;
@@ -273,7 +273,7 @@ i32 mem_map::update_block(i32 addr, i32 zero){
     tlb->entries[hitway].entry = lookup2(addr); //&(mapents[tag]);
     tlb->entries[hitway].tag = tag;
     tlb->entries[hitway].valid = 1;
-    tlb->total_energy += (TLB1WE) << enabled; // refill write energy
+    tlb->total_energy += (TLB1WE) * (enabled+1); // refill write energy
   }
   update_lru(tlb, hitway);
   before = mapents[tag].zero;

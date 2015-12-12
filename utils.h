@@ -21,28 +21,37 @@ typedef unsigned long long i64;
 
 extern i64 curr_ck;
 
-#define TLB1RE 2
-#define TLB1WE 2
-#define TLB2RE 2
-#define TLB2WE 2
-
+// cache latencies
+// core caches
 #define CL1DELAY 2
-#define CL1WE 10
-#define CL1RE 10
-#define CL2DELAY 14
-#define CL2RE 100
-#define CL2WE 100
-
+#define CL2DELAY 10
+// metadata caches
 #define ML1DELAY 1
-#define ML1RE 10
-#define ML1WE 10
 #define ML2DELAY 8
-#define ML2RE 100
-#define ML2WE 100
-
+// memory
 #define MEMDELAY 200
-#define MEMRE 10000 // todo: what's typ dram read energy?
-#define MEMWE 10000 // todo: what's typ dram read energy?
+
+// cache energies
+// TLB reads
+#define TLB1RE 0.0130335e-9
+#define TLB2RE 0.0287198e-9
+// TLB writes
+#define TLB1WE 0.0130335e-9
+#define TLB2WE 0.0287198e-9
+// core caches
+#define CL1WE (0.435469e-9)*.75
+#define CL1RE (0.435469e-9)*.75
+#define CL2RE 0.182316e-9
+#define CL2WE 0.182316e-9
+// metadata caches
+#define ML1RE 0.0527827e-9
+#define ML1WE 0.0527827e-9
+#define ML2RE 0.104604e-9
+#define ML2WE 0.104604e-9
+// DRAM
+#define MEMRE 4e-9 // todo: what's typ dram read energy?
+#define MEMWE 4e-9 // todo: what's typ dram read energy?
+
 #define QSIZE 16
 
 // lru implementation
