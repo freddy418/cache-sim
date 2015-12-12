@@ -161,6 +161,7 @@ map_entry* mem_map::lookup2(i32 addr){
     if (tlb2->entries[hitway].dirty == 1){
       bwused += 8;
       tlb2->total_energy += (TLB2RE) * (enabled+1); // writeback read energy
+      mem_energy += MEMWE/8; // memory write energy
       if (enabled == 1){
 	bwused += bvsize; // write through bandwidth usage
       }
@@ -171,6 +172,7 @@ map_entry* mem_map::lookup2(i32 addr){
     tlb2->entries[hitway].valid = 1;
     tlb2->total_energy += TLB2WE * (enabled+1); // refill write energy
     bwused += 8;
+    mem_energy += MEMRE/8; // memory write energy
     if (enabled == 1){
       bwused += bvsize;
     }
@@ -213,6 +215,7 @@ void mem_map::insert2(i32 tag){
     if (tlb2->entries[hitway].dirty == 1){
       bwused += 8;
       tlb2->total_energy += (TLB2RE) * (enabled+1);  // writeback read energy
+      mem_energy += MEMWE/8; // memory write energy
       if (enabled == 1){
 	bwused += bvsize; // write through bandwidth usage
       }
@@ -222,6 +225,7 @@ void mem_map::insert2(i32 tag){
     tlb2->entries[hitway].tag = tag;
     tlb2->entries[hitway].valid = 1;
     tlb2->total_energy += TLB2WE * (enabled+1); // refill write energy
+    mem_energy += MEMRE/8; // memory write energy
     bwused += 8;
     if (enabled == 1){
       bwused += bvsize;

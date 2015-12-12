@@ -137,6 +137,7 @@ i32 coredrv::clock(){
       fprintf(stderr, "Now at %u accesses in the monitored application\n", accesses);
       }*/
     if (accesses == skip){
+      mem_energy = 0;
       dl1->clearstats();
       dl2->clearstats();
       if (mp != 0){
@@ -299,6 +300,7 @@ void coredrv::stats(){
     printf("%llu Queue full stall cycles\n", qstallcyc);
     printf("%llu Non-memory instructions in traces\n", totaligap);
   }
+  printf("Total Memory energy: %f Joules\n", mem_energy);
 }
 
 i32 coredrv::get_accs(){

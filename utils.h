@@ -20,6 +20,7 @@ typedef unsigned int i32;
 typedef unsigned long long i64;
 
 extern i64 curr_ck;
+extern float mem_energy;
 
 // cache latencies
 // core caches

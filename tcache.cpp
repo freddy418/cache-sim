@@ -116,9 +116,10 @@ void tcache::writeback(cache_block* bp, i32 addr){
         printf("%llx,", bp->value[i]);
       }
 #endif
-      mem->write((addr & amask) + (i<<oshift), bp->value[i]);
+      mem->write((addr & amask) + (i<<oshift), bp->value[i]);      
     }
     bwused += bsize;
+    mem_energy += MEMWE; // memory write energy
   }
 
 #ifdef DBG
@@ -315,7 +316,8 @@ if ((addr & amask) + (i<<oshift) == DBG_ADDR){
 #endif
 	//printf("REFILL (%X): Reading mem addr (%X), data(%llX)\n", addr, ((addr&amask)+(i<<oshift)), bp->value[i]);
       }
-      bwused += bsize;      
+      bwused += bsize;
+      mem_energy += MEMRE;
       delay = mem->load();
       if ((map != 0) && (map->get_enabled())){
 	delay++; // extra cycle to read NDM bit

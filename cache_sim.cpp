@@ -7,6 +7,7 @@ using namespace std;
 #define RANGE 1<<28
 
 i64 curr_ck;
+float mem_energy;
 
 int main(int argc, char** argv){
     if (argc != 11){
@@ -25,6 +26,7 @@ int main(int argc, char** argv){
     freader* fr = new freader(atoi(argv[2]), argv[9], argv[10]);
     bool cp = false;
     curr_ck = 0;
+    mem_energy = 0;
 
     cas->taggran = atoi(argv[1]);
     cas->tagsize = cas->taggran; //atoi(argv[2]);
