@@ -501,6 +501,7 @@ void tcache::stats(){
   printf("%s: %d KB cache:\n", name, size >> 10);
   printf("miss rate: %1.8f\n", (((double)misses)/(accs)));
   printf("%llu accesses, %llu hits, %llu misses, %llu writebacks, %llu allocs\n", accs, hits, misses, writebacks, allocs);
+  printf("total energy used: %f Joules\n", total_energy);
   if (mem != 0){
     printf("bandwidth used: %llu KB\n", (bwused >> 10));
   }
