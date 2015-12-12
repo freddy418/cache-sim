@@ -29,6 +29,7 @@ mem_map::mem_map(i32 en, i32 ps, i32 bs, i32 cs, i32 tg, i32 ts){
   // create the l1 map tlb
   tlb = new mm_cache();
   tlb->nents = cs;
+  tlb->total_energy = 0;
   tlb->accs = 0;
   tlb->hits = 0;
   tlb->misses = 0;
@@ -53,12 +54,13 @@ mem_map::mem_map(i32 en, i32 ps, i32 bs, i32 cs, i32 tg, i32 ts){
 
   // create the l2 map tlb
   tlb2 = new mm_cache();
-  tlb2->nents = cs << 2;
+  tlb2->nents = cs << 3;
+  tlb2->total_energy = 0;
   tlb2->accs = 0;
   tlb2->hits = 0;
   tlb2->misses = 0;
   tlb2->zeros = 0;
-  tlb2->entries = new tlb_entry[cs << 2];
+  tlb2->entries = new tlb_entry[tlb2->nents];
   for (i32 i=0;i<tlb2->nents;i++){
     tlb2->entries[i].entry = 0;
     tlb2->entries[i].valid = 0;
@@ -100,11 +102,18 @@ i32 mem_map::lookup(i32 addr){
   }else{
     tlb->misses++;
     hitway = tlb->lru->val;
+    if (tlb->entries[hitway].dirty == 1){
+      // TODO: write this dirty line to L2 TLB
+      tlb->total_energy += (TLB1RE) << enabled; // writeback read energy
+      tlb->entries[hitway].dirty = 0;
+    }
     tlb->entries[hitway].entry = lookup2(addr); //&(mapents[tag]);
     tlb->entries[hitway].tag = tag;
     tlb->entries[hitway].valid = 1;
+    tlb->total_energy += TLB1WE << enabled; // refill energy
   }
   update_lru(tlb, hitway);
+  tlb->total_energy += TLB1RE << enabled; // read energy
   tlb->accs++;
 
   //printf("Map lookup for addr: %X, hitway: %u, block: %u, bv: %X, result: %u\n", addr,  hitway, block, tlb->entries[hitway]->zero, ((tlb->entries[hitway]->zero >> block) & 1));
@@ -149,9 +158,18 @@ map_entry* mem_map::lookup2(i32 addr){
   }else{
     tlb2->misses++;
     hitway = tlb2->lru->val;
+    if (tlb2->entries[hitway].dirty == 1){
+      bwused += 8;
+      tlb2->total_energy += (TLB2RE) << enabled; // writeback read energy
+      if (enabled == 1){
+	bwused += bvsize; // write through bandwidth usage
+      }
+      tlb2->entries[hitway].dirty = 0;
+    }
     tlb2->entries[hitway].entry = &(mapents[tag]);
     tlb2->entries[hitway].tag = tag;
     tlb2->entries[hitway].valid = 1;
+    tlb2->total_energy += TLB2WE << enabled; // refill write energy
     bwused += 8;
     if (enabled == 1){
       bwused += bvsize;
@@ -169,7 +187,50 @@ map_entry* mem_map::lookup2(i32 addr){
   //printf("Map lookup for addr: %X, hitway: %u, block: %u, bv: %X, result: %u\n", addr,  hitway, block, tlb->entries[hitway]->zero, ((tlb->entries[hitway]->zero >> block) & 1));
   //printf("bshift: %u, bmask: %x\n", bshift, bmask);
 
+  tlb2->total_energy += TLB2RE << enabled; // actual read energy
   return (tlb2->entries[hitway].entry);
+}
+
+void mem_map::insert2(i32 tag){
+  i32 hit, hitway;
+  hit = hitway = 0;
+
+  // check tags of tlb entries
+  for(i32 i=0;i<tlb2->nents;i++){
+    if ((tlb2->entries[i].tag == tag) && (tlb2->entries[i].valid == 1)){
+      hit = 1;
+      hitway = i;
+      break;
+    }
+  }
+
+  // update bookkeeping
+  if (hit == 1){
+    tlb2->hits++;
+  }else{
+    tlb2->misses++;
+    hitway = tlb2->lru->val;
+    if (tlb2->entries[hitway].dirty == 1){
+      bwused += 8;
+      tlb2->total_energy += (TLB2RE) << enabled;  // writeback read energy
+      if (enabled == 1){
+	bwused += bvsize; // write through bandwidth usage
+      }
+      tlb2->entries[hitway].dirty = 0;
+    }
+    tlb2->entries[hitway].entry = &(mapents[tag]);
+    tlb2->entries[hitway].tag = tag;
+    tlb2->entries[hitway].valid = 1;
+    tlb2->total_energy += TLB2WE << enabled; // refill write energy
+    bwused += 8;
+    if (enabled == 1){
+      bwused += bvsize;
+    }
+  }
+  update_lru(tlb2, hitway);
+  tlb2->total_energy += TLB2WE << enabled; //  actual write energy
+  tlb2->entries[hitway].dirty = 1;
+  tlb2->accs++;
 }
 
 // 1-3-15 - changed the semantics of this function from void to return an integer
@@ -203,16 +264,16 @@ i32 mem_map::update_block(i32 addr, i32 zero){
     tlb->misses++;
     hitway = tlb->lru->val;
     if (tlb->entries[hitway].dirty == 1){
-      bwused += 8;
-      if (enabled == 1){
-	//TODO: this is wrong, tlb2 needs to be updated and tlb2 needs to write memory
-	bwused += bvsize; // write through bandwidth usage
-      }
+      // read out L1 TLB entry
+      tlb->total_energy += (TLB1RE) << enabled; // writeback read energy
+      // write to L2 TLB
+      insert2(tlb->entries[hitway].tag);
       tlb->entries[hitway].dirty = 0;
     }
     tlb->entries[hitway].entry = lookup2(addr); //&(mapents[tag]);
     tlb->entries[hitway].tag = tag;
     tlb->entries[hitway].valid = 1;
+    tlb->total_energy += (TLB1WE) << enabled; // refill write energy
   }
   update_lru(tlb, hitway);
   before = mapents[tag].zero;
@@ -231,7 +292,8 @@ i32 mem_map::update_block(i32 addr, i32 zero){
 
   tlb->entries[hitway].dirty = 1;
   tlb->accs++;
-
+  
+  tlb->total_energy += TLB1RE + TLB1WE; // NDM only read modify write energy
   // successful return
   return 1;
 }
@@ -286,10 +348,12 @@ void mem_map::stats(){
   printf("%d entry L1 TLB stats\n", tlb->nents);
   printf("%d accesses, %d hits, %d misses, %d avoided accesses\n", tlb->accs, tlb->hits, tlb->misses, tlb->zeros);
   printf("miss rate: %1.8f\n", (((double)tlb->misses)/(tlb->accs)));
+  printf("total energy: %f Joules\n", tlb->total_energy);
   printf("%d entry L2 TLB stats\n", tlb2->nents);
   printf("%d accesses, %d hits, %d misses\n", tlb2->accs, tlb2->hits, tlb2->misses);
   printf("miss rate: %1.8f\n", (((double)tlb2->misses)/(tlb2->accs)));
   printf("bandwidth used: %llu KB\n", (bwused >> 10));
+  printf("total energy: %f Joules\n", tlb2->total_energy);
 }
 
 mm_cache* mem_map::get_tlb(){
@@ -300,6 +364,11 @@ void mem_map::clearstats(){
   tlb->accs = 0;
   tlb->hits = 0;
   tlb->misses = 0;
+  tlb->total_energy = 0;
+  tlb2->accs = 0;
+  tlb2->hits = 0;
+  tlb2->misses = 0;
+  tlb2->total_energy = 0;
 }
 
 i32 mem_map::get_enabled(){

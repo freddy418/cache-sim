@@ -26,6 +26,7 @@ typedef struct map_cache_struct {
   i32 hits;
   i32 misses;
   i32 zeros;
+  float total_energy;
 } mm_cache;
 
 // Core 2 had a 16 entry L1 TLB and 256 entry L2 TLB
@@ -51,11 +52,12 @@ class mem_map {
  public:
   mem_map(i32 enable, i32 ps, i32 bs, i32 cs, i32 tg, i32 ts);
   i32 lookup(i32 addr);
-  map_entry* lookup2(i32 addr);
   i32 update_block(i32 addr, i32 zero);
   void update_lru(mm_cache* tlb, i32 hitway);
   void stats();
   void clearstats();
+  map_entry* lookup2(i32 addr); //L2TLB read
+  void insert2(i32 tag); //L2TLB write
   mm_cache* get_tlb();
   i32 get_enabled();
 };

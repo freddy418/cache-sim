@@ -2,6 +2,8 @@
 
 coredrv::coredrv(core_args* args){
   // read input arguments
+  i32 l1delay = ((core_args*)args)->l1delay;
+  i32 l2delay = ((core_args*)args)->l2delay;
   taggran = ((core_args*)args)->taggran;
   tagsize = ((core_args*)args)->tagsize;
   rdalloc = ((core_args*)args)->rdalloc;
@@ -19,6 +21,10 @@ coredrv::coredrv(core_args* args){
   sp = ((core_args*)args)->sp;
   name = ((core_args*)args)->name;
   fr = ((core_args*)args)->fr;
+  l1_read_energy = ((core_args*)args)->l1_read_energy;
+  l1_write_energy = ((core_args*)args)->l1_write_energy;
+  l2_read_energy = ((core_args*)args)->l2_read_energy;
+  l2_write_energy = ((core_args*)args)->l2_write_energy;
   pmask = ~((1 << (int)(log2(pagesize) - (6-log2(taggran))-(6-log2(tagsize)))) - 1);
   done = 0;
   
@@ -29,9 +35,13 @@ coredrv::coredrv(core_args* args){
   m200cyc = 0;
   m300cyc = 0;
   m300pcyc = 0;
+  totaldelay = 0;
+  nbupdates = 0;
   // misc stall counters
   qstallcyc = 0;
   totaligap = 0;
+  mismatches = 0;
+  mismaps = 0;
   // track instruction count at last access
   lastic = 0;
 
@@ -42,9 +52,9 @@ coredrv::coredrv(core_args* args){
   printf("Page Size=%u and Page Mask=%x\n", pagesize, pmask); 
 
   // initialize cache and local variables;
-  dl1 = new tcache(l1sets, l1assoc, bsize, taggran, tagsize, L1DELAY, L2DELAY);
-  dl2 = new tcache(l2sets, l2assoc, bsize, taggran, tagsize, L2DELAY, MEMDELAY);
-  mp = new mem_map(mapon, pagesize, bsize, 32, taggran, tagsize); // added enable (0-off,1-on)
+  dl1 = new tcache(l1sets, l1assoc, bsize, taggran, tagsize, l1delay, l2delay, l1_read_energy, l1_write_energy);
+  dl2 = new tcache(l2sets, l2assoc, bsize, taggran, tagsize, l2delay, MEMDELAY, l1_read_energy, l2_write_energy);
+  mp = new mem_map(mapon, pagesize, bsize, 64, taggran, tagsize); // added enable (0-off,1-on)
 
   dl1->set_nl(dl2);
   dl2->set_mem(sp);
@@ -55,6 +65,7 @@ coredrv::coredrv(core_args* args){
   curr_ic = 0;
   warm_ic = 0;
   warm_ck = 0;
+  warm_accs = 0;
   memset(&curr_req, 0, sizeof(sim_req));
   temp_req = 0;
 }
@@ -135,6 +146,7 @@ i32 coredrv::clock(){
 	printf("%s warmup completed at %u accesses and %llu instructions\n", name, accesses, curr_ic);
 	warm_ic = curr_ic;
 	warm_ck = curr_ck;
+	warm_accs = accesses;
 	m1cyc = 0;
 	m20cyc = 0;
 	m200cyc = 0;
@@ -142,6 +154,8 @@ i32 coredrv::clock(){
 	m300pcyc = 0;
 	qstallcyc = 0;
 	totaligap = 0;
+	totaldelay = 0;
+	nbupdates = 0;
       }else{
 	printf("%s warmup completed at %u accesses\n", name, accesses);
       }
@@ -178,53 +192,34 @@ i32 coredrv::clock(){
       dl2->set_anum(accesses);
       
       if (curr_req.isRead == 0){
+	sval = 0;
 	// check the map first
-	if (rdalloc == 0){
-	  if (zero == 1){
+	if ((rdalloc == 0 && zero == 1) || rdalloc == 1){
 	    crdata rdata = dl1->read(curr_req.addr);
 	    sval = rdata.value;
 	    delay = rdata.delay;
+	    if (rdalloc == 0 && zero == 1){
+	      delay++; // additional delay when NDM-E bit misses
+	    }
 	    if (fr != 0){
 	      if (delay == 1){
 		m1cyc++;
 	      }	else if (delay == 20){
 		m20cyc++;
-	      } else if (delay == 200){
+	      } else if (delay >= 200 && delay < 300){
 		m200cyc++;
-	      } else if (delay <= 300){
+	      } else if (delay == 300){
 		m300cyc++;
-	      } else if (delay > 300){
+	      }	else if (delay > 300){
 		m300pcyc++;
-	      } else {
+	      }/* else {
 		printf("Delay of %u cycles unaccounted for\n", delay);
-		assert(0);
-	      }
+		//assert(0);
+		}*/
 	    }
-	  }else{
-	    sval = 0;
-	  }
-	}else{
-	  crdata rdata = dl1->read(curr_req.addr);
-	  sval = rdata.value;
-	  delay = rdata.delay;
-	  if (fr != 0){
-	    if (delay == 1){
-	      m1cyc++;
-	    }	else if (delay == 20){
-	      m20cyc++;
-	    } else if (delay == 200){
-	      m200cyc++;
-	    } else if (delay <= 300){
-	      m300cyc++;
-	    } else if (delay > 300){
-	      m300pcyc++;
-	    } else {
-	      printf("Delay of %u cycles unaccounted for\n", delay);
-	      assert(0);
-	    }
-	  }
+	    totaldelay += delay;
 	}
-	if (sval != curr_req.value){
+	if (sval != curr_req.value && fr == 0){
 	  //printf("Access(%u): Store and trace unmatched for addr (%X): s(%llX), t(%llX)\n", coreaccs, addr, sval, value);
 	  //assert(0);
 	  // fix up to prevent later mismatches
@@ -255,7 +250,9 @@ i32 coredrv::clock(){
 	  mp->update_block(curr_req.addr, 1);
 	  //printf("Calling cache_allocate for %08X\n", addr);
 	  dl1->allocate(curr_req.addr); // special function to allocate a cache line with all zero
+	  nbupdates++;
 	}
+	totaldelay += delay; // writes have a 1 cycle delay
 	dl1->write(curr_req.addr, curr_req.value); // this needs to return a delay?
       }
       curr_req.fill_cycle = curr_ck + delay - 1;
@@ -294,10 +291,11 @@ void coredrv::stats(){
   
   printf("%llu initialization mismatches encountered\n", mismatches);
   printf("%llu mapping mismatches encountered\n", mismaps);
+  printf("%llu Total memory stall cycles: %u 1cycle, %u 20cycles, %u 200cycles, %f average memory delay\n", totaldelay, m1cyc, m20cyc, m200cyc, (float)(totaldelay)/(accesses-warm_accs));
+  printf("%u Null Bit updates on L1 write\n", nbupdates);
   if (fr != 0){
     printf("%llu instructions commmited in %llu cycles\n", curr_ic-warm_ic, clocks-warm_ck);
     printf("Simulated IPC: %1.3f\n", (float)(curr_ic-warm_ic)/(clocks-warm_ck));
-    printf("%u Total memory stall cycles: %u 1cycle, %u 20cycles, %u 200cycles\n", m1cyc+m20cyc*20+m200cyc*200, m1cyc, m20cyc, m200cyc);
     printf("%llu Queue full stall cycles\n", qstallcyc);
     printf("%llu Non-memory instructions in traces\n", totaligap);
   }
@@ -305,6 +303,10 @@ void coredrv::stats(){
 
 i32 coredrv::get_accs(){
   return accesses;
+}
+
+i64 coredrv::get_ic(){
+  return curr_ic;
 }
 
 void coredrv::set_done(){

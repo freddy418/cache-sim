@@ -21,9 +21,28 @@ typedef unsigned long long i64;
 
 extern i64 curr_ck;
 
-#define L1DELAY 1
-#define L2DELAY 20
+#define TLB1RE 2
+#define TLB1WE 2
+#define TLB2RE 2
+#define TLB2WE 2
+
+#define CL1DELAY 2
+#define CL1WE 10
+#define CL1RE 10
+#define CL2DELAY 14
+#define CL2RE 100
+#define CL2WE 100
+
+#define ML1DELAY 1
+#define ML1RE 10
+#define ML1WE 10
+#define ML2DELAY 8
+#define ML2RE 100
+#define ML2WE 100
+
 #define MEMDELAY 200
+#define MEMRE 10000 // todo: what's typ dram read energy?
+#define MEMWE 10000 // todo: what's typ dram read energy?
 #define QSIZE 16
 
 // lru implementation

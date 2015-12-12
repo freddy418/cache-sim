@@ -19,12 +19,18 @@ typedef struct core_args_t {
   i32 l2sets;
   i32 bsize;
   i32 skip;
+  i32 l1delay;
+  i32 l2delay;
   char * dir;
   char * bench;
   char * name;
   std::queue<cache_req*>* qp;
   tmemory* sp;
   freader* fr;
+  float l1_read_energy;
+  float l1_write_energy;
+  float l2_read_energy;
+  float l2_write_energy;
 } core_args;
 
 class coredrv {
@@ -40,6 +46,10 @@ class coredrv {
   i32 pmask;
   i32 skip;
   i32 pagesize;
+  float l1_read_energy;
+  float l1_write_energy;
+  float l2_read_energy;
+  float l2_write_energy;
   tcache* dl1;
   tcache* dl2;
   mem_map* mp;
@@ -59,19 +69,23 @@ class coredrv {
   i32 m200cyc;
   i32 m300cyc;
   i32 m300pcyc;
+  i32 nbupdates;
   i64 qstallcyc;
   i64 totaligap;
   i64 lastic;
   i32 accesses;
   i64 warm_ic;
   i64 warm_ck;
+  i32 warm_accs;
   i64 clocks;
+  i64 totaldelay;
   cache_req* temp_req;
 public:
   coredrv(core_args* args);
   void stats();
   i32 clock();
   i32 get_accs();
+  i64 get_ic();
   void set_done();
 };
 

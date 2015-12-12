@@ -1,10 +1,11 @@
 #include "store.h"
 
 // create the pointers
-tmemory::tmemory(i32 tg, i32 ts){
+tmemory::tmemory(i32 tg, i32 ts, i32 hd){
   //printf("Entering create_memory\n");
   i32 os = (6-log2(tg)) - (6-log2(ts));
   i32 pgs = 1<<(20+os);
+  hitdelay = hd;
   pages = new tpage*[pgs];
   pmask = pgs - 1;
   pshift = 12-os;
@@ -16,7 +17,7 @@ tmemory::tmemory(i32 tg, i32 ts){
 }
 
 i64 tmemory::load(){
-  i64 delay = MEMDELAY;
+  i64 delay = hitdelay;
   i64 busy = nextfree-curr_ck;
   if (curr_ck < nextfree){
     delay += busy;

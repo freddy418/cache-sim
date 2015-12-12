@@ -1,7 +1,7 @@
 #include "tcache.h"
 #include <cstring>
 
-tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md){
+tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md, float re, float we){
   /* initialize cache parameters */
   i32 ofs = (6-log2(tg))-(6-log2(ts));
   sets = new cache_set[ns];
@@ -15,6 +15,8 @@ tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md){
   imask = ns-1;
   oshift = 3 - ofs;
   bmask = (bs >> 3) - 1;
+  read_energy = re;
+  write_energy = we;
 
   tmask = (1ULL << (i32)(log2(64/ts)))-1;
   tshift = log2(ts);
@@ -36,6 +38,7 @@ tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md){
   misses = 0;
   writebacks = 0;
   allocs = 0;
+  total_energy = 0;
  
 #ifdef LINETRACK
   mcount = (i32*)calloc(nsets, sizeof(i32));
@@ -70,6 +73,7 @@ void tcache::clearstats(){
    bwused = 0;
    writebacks = 0;
    allocs = 0;
+   total_energy = 0;
 
 #ifdef LINETRACK 
    for(int i=0;i<nsets;i++){
@@ -124,6 +128,7 @@ void tcache::writeback(cache_block* bp, i32 addr){
 #endif
 
   bp->dirty = 0;
+  total_energy += read_energy * bvals;
   writebacks++;
 }
 
@@ -184,6 +189,7 @@ void tcache::allocate(i32 addr){
   } // otherwise just update LRU info
 
   update_lru(&(sets[index]), hitway);
+  total_energy += write_energy * bvals;
   allocs++;
 }
 
@@ -208,6 +214,8 @@ void tcache::touch(i32 addr){
   if (hit == 1){
     update_lru(&(sets[index]), hitway);
   }
+
+  // update tag energy
 }
 
 void tcache::copy(i32 addr, cache_block* op){
@@ -252,6 +260,7 @@ void tcache::copy(i32 addr, cache_block* op){
   }
 
   update_lru(&(sets[index]), hitway);
+  total_energy += write_energy * bvals;
 }
 
 i32 tcache::refill(cache_block* bp, i32 addr){
@@ -306,8 +315,11 @@ if ((addr & amask) + (i<<oshift) == DBG_ADDR){
 #endif
 	//printf("REFILL (%X): Reading mem addr (%X), data(%llX)\n", addr, ((addr&amask)+(i<<oshift)), bp->value[i]);
       }
-      bwused += bsize;
+      bwused += bsize;      
       delay = mem->load();
+      if ((map != 0) && (map->get_enabled())){
+	delay++; // extra cycle to read NDM bit
+      }
     }else{
       for (i=0;i<bvals;i++){
         bp->value[i] = 0;
@@ -322,6 +334,7 @@ if ((addr & amask) + (i<<oshift) == DBG_ADDR){
   }
   //printf("block size: %d, index: %d, addr: %X, bmask: %X\n", (bsize), (addr>>bshift)&(bmask), addr, bmask);
 
+  total_energy += write_energy * bvals;
   return delay;
 }
 
@@ -340,6 +353,7 @@ crdata tcache::read(i32 addr){
 #endif
   */
 
+  // this is a mux, no need to model energy
   return ret;
 }
 
@@ -397,6 +411,7 @@ crdata tcache::readw(i32 addr){
     }
     #endif*/
   
+  total_energy += read_energy;
   ret.value = block->value[((addr>>oshift)&bmask)];
   return ret;
 }
@@ -476,6 +491,7 @@ i32 tcache::write(i32 addr, i64 data){
   block->dirty = 1;
   this->update_lru(&(sets[index]), hitway);
   accs++;
+  total_energy += write_energy;
   return delay;
 }
 

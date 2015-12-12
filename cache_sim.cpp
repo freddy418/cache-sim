@@ -31,10 +31,10 @@ int main(int argc, char** argv){
     cas->rdalloc = 1;
     cas->mapon = 0; //atoi(argv[4]);
     cas->pagesize = 4096;
-    cas->l1assoc = 4;
+    cas->l1assoc = 8;
     cas->l1sets = 64;
     cas->l2assoc = 16; //atoi(argv[5]);
-    cas->l2sets = 1024; //atoi(argv[6]);
+    cas->l2sets = 2048; //atoi(argv[6]);
     cas->bsize = 64; //atoi(argv[7]);
     cas->skip = atoi(argv[8]) * 1000000;
     cas->dir = argv[9];
@@ -42,8 +42,14 @@ int main(int argc, char** argv){
     cas->qp = &iq;
     cas->name = names[0];
     cas->fr = fr;
+    cas->l1delay = CL1DELAY;
+    cas->l2delay = CL2DELAY;
+    cas->l1_read_energy = CL1RE;
+    cas->l1_write_energy = CL1WE;
+    cas->l2_read_energy = CL2RE;
+    cas->l2_write_energy = CL2WE;
 
-    tmemory* sp = new tmemory(cas->taggran, cas->tagsize);
+    tmemory* sp = new tmemory(cas->taggran, cas->tagsize, MEMDELAY);
     cas->sp = sp;
 
     mas->taggran = atoi(argv[1]);
@@ -61,6 +67,12 @@ int main(int argc, char** argv){
     mas->sp = sp;
     mas->name = names[1];
     mas->fr = 0;
+    mas->l1delay = ML1DELAY;
+    mas->l2delay = ML2DELAY;
+    cas->l1_read_energy = ML1RE;
+    cas->l1_write_energy = ML1WE;
+    cas->l2_read_energy = ML2RE;
+    cas->l2_write_energy = ML2WE;
 
     coredrv* core = new coredrv(cas);
     coredrv* monitor = new coredrv(mas);
@@ -83,7 +95,7 @@ int main(int argc, char** argv){
       curr_ck++;
     }
 
-    printf("Core Simulation complete after %u core accesses and %u monitor accesses and %llu simulated cycles\n", core->get_accs(), monitor->get_accs(), curr_ck);
+    printf("Core Simulation complete after %llu core instructions, %u core accesses and %u monitor accesses and %llu simulated cycles\n", core->get_ic(), core->get_accs(), monitor->get_accs(), curr_ck);
     
     // cleanup
     free(cas);

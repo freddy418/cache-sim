@@ -43,8 +43,11 @@ class tcache {
   char * name;
   i32 hitdelay;
   i32 missdelay;
+  float total_energy;
+  float read_energy;
+  float write_energy;
  public:
-  tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md);
+  tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md, float re, float we);
   crdata read(i32 addr); // returns tuple of delay+data
   crdata readw(i32 addr); // returns tuple of delay+data
   i32 write(i32 addr, i64 data); // returns delay
