@@ -71,10 +71,10 @@ int main(int argc, char** argv){
     mas->fr = 0;
     mas->l1delay = ML1DELAY;
     mas->l2delay = ML2DELAY;
-    cas->l1_read_energy = ML1RE;
-    cas->l1_write_energy = ML1WE;
-    cas->l2_read_energy = ML2RE;
-    cas->l2_write_energy = ML2WE;
+    mas->l1_read_energy = ML1RE;
+    mas->l1_write_energy = ML1WE;
+    mas->l2_read_energy = ML2RE;
+    mas->l2_write_energy = ML2WE;
 
     coredrv* core = new coredrv(cas);
     coredrv* monitor = new coredrv(mas);

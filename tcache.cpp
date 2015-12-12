@@ -129,7 +129,6 @@ void tcache::writeback(cache_block* bp, i32 addr){
 #endif
 
   bp->dirty = 0;
-  total_energy += read_energy * bvals;
   writebacks++;
 }
 
@@ -168,6 +167,7 @@ void tcache::allocate(i32 addr){
       printf("ALLOC: address(%08X), tag(%X), w0(%X), w1(%X)\n", addr, tag, sets[index].blks[0].tag, sets[index].blks[1].tag);
     }
 #endif
+    total_energy += read_energy * bvals; // extra writeback read energy
     if (bp->valid == 1 && bp->dirty == 1){
       wbaddr = ((bp->tag) << (ishift+bshift)) + (index<<(bshift));
       this->writeback(bp, wbaddr);
@@ -238,10 +238,13 @@ void tcache::copy(i32 addr, cache_block* op){
   bp = &(sets[index].blks[hitway]);
 
   // if block is valid and dirty, write it back
-  if ((hit == 0) && (bp->valid == 1) && (bp->dirty == 1)){
-    wbaddr = ((bp->tag)<<(ishift+bshift)) + (index<<bshift);
-    // no need to refill, whole line is written from L1
-    this->writeback(bp, wbaddr);
+  if (hit == 0){
+    total_energy += read_energy * bvals; // extra writeback read energy
+    if ((bp->valid == 1) && (bp->dirty == 1)){
+      wbaddr = ((bp->tag)<<(ishift+bshift)) + (index<<bshift);
+      // no need to refill, whole line is written from L1
+      this->writeback(bp, wbaddr);
+    }
   }
 
   if (bp->value == 0){
@@ -392,6 +395,7 @@ crdata tcache::readw(i32 addr){
     misses++;    
     hitway = sets[index].lru->val;
     block = &(sets[index].blks[hitway]);
+    total_energy += read_energy * bvals; // extra writeback read energy
     //printf("miss to index: %d on tag: %x, replaced %d\n", index, tag, hitway);
     if (block->valid == 1 && block->dirty == 1){
       // lock line in next level
@@ -455,6 +459,7 @@ i32 tcache::write(i32 addr, i64 data){
     misses++;    
     hitway = sets[index].lru->val;
     block = &(sets[index].blks[hitway]);
+    total_energy += read_energy * bvals; // extra writeback read energy
     //printf("miss to index: %d on tag: %x, replaced %d\n", index, tag, hitway);
     if (block->valid == 1 && block->dirty == 1){
       // lock line in next level

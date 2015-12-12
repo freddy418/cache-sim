@@ -53,7 +53,7 @@ coredrv::coredrv(core_args* args){
 
   // initialize cache and local variables;
   dl1 = new tcache(l1sets, l1assoc, bsize, taggran, tagsize, l1delay, l2delay, l1_read_energy, l1_write_energy);
-  dl2 = new tcache(l2sets, l2assoc, bsize, taggran, tagsize, l2delay, MEMDELAY, l1_read_energy, l2_write_energy);
+  dl2 = new tcache(l2sets, l2assoc, bsize, taggran, tagsize, l2delay, MEMDELAY, l2_read_energy, l2_write_energy);
   mp = new mem_map(mapon, pagesize, bsize, 64, taggran, tagsize); // added enable (0-off,1-on)
 
   dl1->set_nl(dl2);
