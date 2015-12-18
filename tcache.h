@@ -11,6 +11,7 @@
 
 class tcache {
   cache_set* sets;
+  i32 compress_writeback;
   // modifications to support multi-granularity tags - 3/10/15
   i64 tmask;
   i32 tshift;
@@ -47,7 +48,7 @@ class tcache {
   float read_energy;
   float write_energy;
  public:
-  tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md, float re, float we);
+  tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 cw, i32 hd, i32 md, float re, float we);
   crdata read(i32 addr); // returns tuple of delay+data
   crdata readw(i32 addr); // returns tuple of delay+data
   i32 write(i32 addr, i64 data); // returns delay

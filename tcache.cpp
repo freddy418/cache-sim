@@ -1,7 +1,7 @@
 #include "tcache.h"
 #include <cstring>
 
-tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md, float re, float we){
+tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 cw, i32 hd, i32 md, float re, float we){
   /* initialize cache parameters */
   i32 ofs = (6-log2(tg))-(6-log2(ts));
   sets = new cache_set[ns];
@@ -17,6 +17,7 @@ tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 hd, i32 md, float re,
   bmask = (bs >> 3) - 1;
   read_energy = re;
   write_energy = we;
+  compress_writeback = cw;
 
   tmask = (1ULL << (i32)(log2(64/ts)))-1;
   tshift = log2(ts);
@@ -83,43 +84,52 @@ void tcache::clearstats(){
 }
 
 void tcache::writeback(cache_block* bp, i32 addr){
-  i32 zero = 0;
+  i32 zero = 1;
 
-  // L1 cache
-  if (next_level != 0){
-    next_level->copy(addr, bp);
-    bwused += bsize;
-  }
-
-  // update maps on eviction
-  if (mem !=0 && map != 0 && map->get_enabled() == 1){
+  // check if the line is compressible
+  if ((compress_writeback == 1) && (map != 0 && map->get_enabled() == 1)){
+    zero = 0;
     for (i32 i=0;i<bvals;i++){
       if (bp->value[i] != 0){
 	zero = 1;
 	break;
       }
     }
+  }
+
+  // if it is compressible, just update the ndm bit
+  if (zero == 0){
     map->update_block(addr, zero);
   }
-
+  // complete the writeback
+  else{
 #ifdef DBG
-  if ((addr & amask) <= DBG_ADDR && (addr & amask) + (bvals<<oshift) > DBG_ADDR){
-    printf("%s (%llu) Writing back (%x) zero(%u):", name, totalaccs, addr, zero);
-    fflush(stdout);
-  }
-#endif
-
-  if (mem != 0 && (zero == 1 || map == 0 || map->get_enabled() == 0)){
-    for (i32 i=0;i<bvals;i++){
-#ifdef DBG
-      if ((addr & amask) <= DBG_ADDR && (addr & amask) + (bvals<<oshift) > DBG_ADDR){
-        printf("%llx,", bp->value[i]);
-      }
-#endif
-      mem->write((addr & amask) + (i<<oshift), bp->value[i]);      
+    if ((addr & amask) <= DBG_ADDR && (addr & amask) + (bvals<<oshift) > DBG_ADDR){
+      printf("%s (%llu) Writing back (%x) zero(%u):", name, totalaccs, addr, zero);
+      fflush(stdout);
     }
-    bwused += bsize;
-    mem_energy += MEMWE; // memory write energy
+#endif
+    // L1 writeback
+    if (next_level != 0){
+      next_level->copy(addr, bp);
+      bwused += bsize;
+    }
+    // L2 writeback
+    else if (mem != 0){
+      for (i32 i=0;i<bvals;i++){
+#ifdef DBG
+	if ((addr & amask) <= DBG_ADDR && (addr & amask) + (bvals<<oshift) > DBG_ADDR){
+	  printf("%llx,", bp->value[i]);
+	}
+#endif
+	mem->write((addr & amask) + (i<<oshift), bp->value[i]);      
+      }
+      bwused += bsize;
+      mem_energy += MEMWE; // memory write energy
+    }
+
+    // update stats that we wrote back a line
+    writebacks++;
   }
 
 #ifdef DBG
@@ -128,8 +138,8 @@ void tcache::writeback(cache_block* bp, i32 addr){
 }
 #endif
 
+  // line is no longer dirty
   bp->dirty = 0;
-  writebacks++;
 }
 
 void tcache::allocate(i32 addr){
