@@ -1,10 +1,10 @@
-#include "tcache.h"
+#include "mtcache.h"
 #include <cstring>
 
-tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 cw, i32 hd, i32 md, float re, float we){
+mtcache::mtcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 cw, i32 hd, i32 md, float re, float we){
   /* initialize cache parameters */
   i32 ofs = (6-log2(tg))-(6-log2(ts));
-  sets = new tcache_set[ns];
+  sets = new mtcache_set[ns];
   mem = 0;
   map = 0;
   next_level = 0;
@@ -59,7 +59,7 @@ tcache::tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 cw, i32 hd, i32 md, f
   }
 }
 
-void tcache::clearstats(){
+void mtcache::clearstats(){
    accs = 0;
    hits = 0;
    misses = 0;
@@ -75,39 +75,37 @@ void tcache::clearstats(){
 #endif
 }
 
-void tcache::writeback(cache_block* bp, i32 addr){
-  i32 skip = 0;
+void mtcache::writeback(cache_block* bp, i32 addr){
+  i32 zero = 1;
 
   // check if the line is compressible
-  if (compress_writeback){
-    i32 zero = 0;
-    skip = 1;
+  if ((compress_writeback == 1) && (map != 0 && map->get_enabled() == 1)){
+    zero = 0;
     for (i32 i=0;i<bvals;i++){
       if (bp->value[i] != 0){
 	zero = 1;
-	skip = 0;
 	break;
       }
     }
-    if (map != 0 && map->get_enabled() == 1){
-      map->update_block(addr, zero);
-    }
   }
 
-#ifdef DBG
-  if ((addr & amask) <= DBG_ADDR && (addr & amask) + (bvals<<oshift) > DBG_ADDR){
-    printf("Access (%u): %s Writing back (%lu) with line starting at (%x):", accs, name, DBG_ADDR, addr);
-    for (i32 i=0;i<bvals;i++){
-      printf("%llx,", bp->value[i]);
-    }
-    printf("\n");
-    fflush(stdout);
+  // if it is compressible, just update the ndm bit
+  if (zero == 0){
+    map->update_block(addr, zero);
   }
-#endif
-
   // complete the writeback
-  // L1 writeback
-  if (skip == 0){
+  else{
+    /*#ifdef DBG
+    if ((addr & amask) <= DBG_ADDR && (addr & amask) + (bvals<<oshift) > DBG_ADDR){
+      printf("%s (%llu) Writing back (%lx) with line starting at (%x) when zero(%u):", name, accs, DBG_ADDR, addr, zero);
+      for (i32 i=0;i<bvals;i++){
+	printf("%llx,", bp->value[i]);
+      }
+      printf("\n");
+      fflush(stdout);
+    }
+    #endif*/
+    // L1 writeback
     if (next_level != 0){
       next_level->copy(addr, bp);
       bwused += bsize;
@@ -115,40 +113,21 @@ void tcache::writeback(cache_block* bp, i32 addr){
     // L2 writeback
     else if (mem != 0){
       for (i32 i=0;i<bvals;i++){
-	i32 write_addr = (addr & amask) + (i<<oshift);
-	i64 write_value = bp->value[i];
-#ifdef DBG
-	if (write_addr == DBG_ADDR){
-	  printf("Access (%u): %s Write back done (%llx) to memory at address (%x)\n", accs, name, write_value, write_addr);
-	}
-#endif
-	mem->write(write_addr, write_value);
+	//mem->write((addr & amask) + (i<<oshift), bp->value[i]);      
       }
       bwused += bsize;
       mem_energy += MEMWE; // memory write energy
     }
-    
+
     // update stats that we wrote back a line
     writebacks++;
   }
-#ifdef DBG
-  else{
-    if ((addr & amask) <= DBG_ADDR && (addr & amask) + (bvals<<oshift) > DBG_ADDR){
-      printf("Access (%u): %s Write back (%lu) with line starting at (%x) SKIPPED :", accs, name, DBG_ADDR, addr);
-      for (i32 i=0;i<bvals;i++){
-	printf("%llx,", bp->value[i]);
-      }
-      printf("\n");
-      fflush(stdout);
-    }
-  }
-#endif
 
   // line is no longer dirty
   bp->dirty = 0;
 }
 
-void tcache::allocate(i32 addr){
+void mtcache::allocate(i32 addr){
   i32 tag, index, hit, hitway, wbaddr;
   cache_block* bp;
 
@@ -166,9 +145,13 @@ void tcache::allocate(i32 addr){
   }
   bp = &(sets[index].blks[hitway]);
 
-#ifdef DBG
-  if (addr == DBG_ADDR){
-    printf("Access (%u): %s Allocating line at index(%u), way(%u) for addr (%u)\n", accs, name, index, hitway, addr);
+  //hits+=hit;
+  //accs++;
+  //misses+=(1-hit);
+
+#ifdef TEST
+  if (addr == 0){
+    printf("%s allocate, set(%X), addr(%X)\n", name, index, addr);
   }
 #endif
 
@@ -201,12 +184,13 @@ void tcache::allocate(i32 addr){
     }
   } // otherwise just update LRU info
 
+
   sets[index].repl->update_lru(hitway);
   total_energy += write_energy * bvals;
   allocs++;
 }
 
-void tcache::touch(i32 addr){
+void mtcache::touch(i32 addr){
   i32 tag, index, hit, hitway;
   cache_block* bp;
 
@@ -231,7 +215,7 @@ void tcache::touch(i32 addr){
   // update tag energy
 }
 
-void tcache::copy(i32 addr, cache_block* op){
+void mtcache::copy(i32 addr, cache_block* op){
   i32 tag, index, hitway, wbaddr, hit;
   cache_block* bp;
 
@@ -279,7 +263,7 @@ void tcache::copy(i32 addr, cache_block* op){
   total_energy += write_energy * bvals;
 }
 
-i32 tcache::refill(cache_block* bp, i32 addr){
+i32 mtcache::refill(cache_block* bp, i32 addr){
   i32 i, index, tag, zero, delay;
   tag = (addr >> (bshift + ishift)); 
   index = (addr >> bshift) & imask;
@@ -294,6 +278,10 @@ i32 tcache::refill(cache_block* bp, i32 addr){
       printf("FATAL: calloc ran out of memory!\n");
       exit(1);
     }
+  }
+
+  if ((map != 0) && (map->get_enabled())){
+    zero = map->lookup(addr);
   }
 
   if (next_level != 0){
@@ -317,20 +305,15 @@ i32 tcache::refill(cache_block* bp, i32 addr){
   else if (mem != 0){
     //printf("sets(%u), bsize(%u) - Refill from memory - addr(%08X), index(%u), tag(%X)\n", nsets, bsize, addr, index, tag);
     //exit(1);
-    zero = 1;
-    if ((map != 0) && (map->get_enabled())){
-      zero = map->lookup(addr);
-    }
-
     if (zero == 1){
       for (i=0;i<bvals;i++){
-	i32 read_addr = (addr & amask) + (i<<oshift);
-	bp->value[i] = mem->read(read_addr);
-#ifdef DBG
-	if (read_addr == DBG_ADDR){
-	  printf("Access (%u): %s Refilled (%llx) from memory address (%x)\n", accs, name, bp->value[i], read_addr);
-	}
-#endif
+	bp->value[i] = mem->read((addr & amask) + (i<<oshift));
+	/*#ifdef DBG
+if ((addr & amask) + (i<<oshift) == DBG_ADDR){
+  printf("Reading %llx from memory at addr (%x)\n", bp->value[i], (addr & amask) + (i<<oshift));
+}
+#endif*/
+	//printf("REFILL (%X): Reading mem addr (%X), data(%llX)\n", addr, ((addr&amask)+(i<<oshift)), bp->value[i]);
       }
       bwused += bsize;
       mem_energy += MEMRE;
@@ -341,12 +324,11 @@ i32 tcache::refill(cache_block* bp, i32 addr){
     }else{
       for (i=0;i<bvals;i++){
         bp->value[i] = 0;
-#ifdef DBG
-	i32 read_addr = (addr & amask) + (i<<oshift);
-	if (read_addr == DBG_ADDR){
-	printf("Access (%u): %s Refilled (%llx) from ndm at address (%x)\n", accs, name, bp->value[i], read_addr);
-        }
-#endif
+	/*#ifdef DBG
+if ((addr & amask) + (i<<oshift) == DBG_ADDR){
+  printf("Reading %llx from memory at addr (%x)\n", 0ULL, (addr & amask) + (i<<oshift));
+}
+#endif*/
       }
       delay = hitdelay;
     }
@@ -357,7 +339,7 @@ i32 tcache::refill(cache_block* bp, i32 addr){
   return delay;
 }
 
-crdata tcache::read(i32 addr){ 
+crdata mtcache::read(i32 addr){ 
   i32 tagindex = (addr >> gshift) & tmask;
   crdata ret;
   
@@ -376,10 +358,9 @@ crdata tcache::read(i32 addr){
   return ret;
 }
 
-crdata tcache::readw(i32 addr){
+crdata mtcache::readw(i32 addr){
   i32 index = (addr >> bshift) & imask;
   i32 tag = (addr >> (bshift + ishift));  
-  i32 pos = (addr >> oshift) & bmask;
   i32 hit = 0;
   i32 hitway = 0;
   i32 zero = 0;
@@ -421,22 +402,23 @@ crdata tcache::readw(i32 addr){
       this->writeback(block, wbaddr);
     }
     ret.delay = this->refill(block, addr);
-  }  
-  ret.value = block->value[pos];
-
-#ifdef DBG
-  if (addr == DBG_ADDR){
-    printf("Access (%u): %s Reading (%llx) from addr (%x) in index(%u), way(%u), pos(%u)\n", accs, name, ret.value, addr, index, hitway, pos);
   }
-#endif
   
   sets[index].repl->update_lru(hitway);
-  total_energy += read_energy;
   accs++;
+
+  /*#ifdef DBG
+  if (addr == DBG_ADDR){
+    printf("%s %s Reading (%llx) from addr (%x) in index(%u) and way(%u)\n", name, hit==1?"hit":"miss",block->value[((addr>>(oshift))&bmask)], addr, index, hitway);
+    }
+    #endif*/
+  
+  total_energy += read_energy;
+  ret.value = block->value[((addr>>oshift)&bmask)];
   return ret;
 }
 
-i32 tcache::write(i32 addr, i64 data){
+i32 mtcache::write(i32 addr, i64 data){
   i32 index = (addr >> bshift) & imask;
   i32 tag = (addr >> (bshift + ishift));  
   i32 tagindex = (addr >> gshift) & tmask;
@@ -487,11 +469,11 @@ i32 tcache::write(i32 addr, i64 data){
     delay = this->refill(block, addr);
   }
 
-#ifdef DBG
+  /*#ifdef DBG
   if (addr == DBG_ADDR){
-    printf("Access (%u): %s Writing (%llx) to addr (%x) in index(%u), way(%u), pos(%u)\n", accs, name, data, addr, index, hitway, pos);
+    printf("%s Writing (%llx) to addr (%x) in index(%u), way(%u), pos(%u)\n", name, data, addr, index, hitway, pos);
   }
-#endif
+  #endif*/
   
   if (tsize != 64){
     // read out block->value
@@ -516,12 +498,12 @@ i32 tcache::write(i32 addr, i64 data){
   return delay;
 }
 
-void tcache::stats(){
+void mtcache::stats(){
   i32 size = (nsets) * (assoc) * (bsize);
 
   printf("%s: %d KB cache:\n", name, size >> 10);
   printf("miss rate: %1.8f\n", (((double)misses)/(accs)));
-  printf("%u accesses, %llu hits, %llu misses, %llu writebacks, %llu allocs\n", accs, hits, misses, writebacks, allocs);
+  printf("%llu accesses, %llu hits, %llu misses, %llu writebacks, %llu allocs\n", accs, hits, misses, writebacks, allocs);
   printf("total energy used: %f Joules\n", total_energy);
   if (mem != 0){
     printf("bandwidth used: %llu KB\n", (bwused >> 10));
@@ -534,38 +516,38 @@ void tcache::stats(){
 #endif
 }
 
-void tcache::set_mem(tmemory* sp){
+void mtcache::set_mem(tmemory* sp){
   mem = sp;
 }
 
-void tcache::set_map(mem_map* mp){
+void mtcache::set_map(mem_map* mp){
   map = mp;
 }
 
-void tcache::set_nl(tcache* cp){
+void mtcache::set_nl(mtcache* cp){
   next_level = cp;
 }
 
-void tcache::set_name(char *cp){
+void mtcache::set_name(char *cp){
   name = cp;
 }
 
-void tcache::set_anum(i32 n){
+void mtcache::set_anum(i32 n){
   anum = n;
 }
 
-i64 tcache::get_accs(){
+i64 mtcache::get_accs(){
   return accs;
 }
 
-i64 tcache::get_hits(){
+i64 mtcache::get_hits(){
   return hits;
 }
 
-void tcache::set_accs(i64 num){
+void mtcache::set_accs(i64 num){
   accs = num;
 }
 
-void tcache::set_hits(i64 num){
+void mtcache::set_hits(i64 num){
   hits = num;
 }

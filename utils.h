@@ -54,6 +54,7 @@ extern float mem_energy;
 #define MEMWE 4e-9 // todo: what's typ dram read energy?
 
 #define QSIZE 16
+#define PSIZE 12 // log2 of page size in bytes
 
 // lru implementation
 typedef struct llnode {
@@ -97,12 +98,6 @@ typedef struct sim_req_t
   i64 value;
   i64 fill_cycle;
 } sim_req;
-
-typedef struct cache_set
-{
-  cache_block* blks;
-  item* lru;
-} cache_set;
 
 typedef struct dict_struct {
   i64 * v; // actual values used from compression

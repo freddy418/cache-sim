@@ -2,6 +2,7 @@
 #include "store.h"
 #include "freader.h"
 #include "coredrv.h"
+#include "mondrv.h"
 using namespace std;
 
 #define RANGE 1<<28
@@ -51,7 +52,7 @@ int main(int argc, char** argv){
     cas->l2_read_energy = CL2RE;
     cas->l2_write_energy = CL2WE;
 
-    tmemory* sp = new tmemory(cas->taggran, cas->tagsize, MEMDELAY);
+    tmemory* sp = new tmemory(atoi(argv[1]), atoi(argv[2]), MEMDELAY);
     cas->sp = sp;
 
     mas->taggran = atoi(argv[1]);
@@ -77,7 +78,7 @@ int main(int argc, char** argv){
     mas->l2_write_energy = ML2WE;
 
     coredrv* core = new coredrv(cas);
-    coredrv* monitor = new coredrv(mas);
+    mondrv* monitor = new mondrv(mas);
 
     while (cret == 0 || mret == 0){
       if (cret == 0){

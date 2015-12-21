@@ -1,6 +1,6 @@
-#include "coredrv.h"
+#include "mondrv.h"
 
-coredrv::coredrv(core_args* args){
+mondrv::mondrv(core_args* args){
   // read input arguments
   i32 l1delay = ((core_args*)args)->l1delay;
   i32 l2delay = ((core_args*)args)->l2delay;
@@ -25,7 +25,8 @@ coredrv::coredrv(core_args* args){
   l1_write_energy = ((core_args*)args)->l1_write_energy;
   l2_read_energy = ((core_args*)args)->l2_read_energy;
   l2_write_energy = ((core_args*)args)->l2_write_energy;
-  pmask = ~((1 << (int)(log2(pagesize) - (6-log2(taggran))-(6-log2(tagsize)))) - 1);
+  i32 l1_comp_wb = ((mapon == 1) && (rdalloc == 0))?1:0;
+  i32 l2_comp_wb = ((mapon == 1) && (rdalloc == 1))?1:0;
   done = 0;
   
   accesses = 0;
@@ -44,18 +45,18 @@ coredrv::coredrv(core_args* args){
   printf("MDCacheSim (last updated 3-14-15):\n");
   printf("Tag Size and Granularity: %u-bit tag per %s\n", tagsize, (taggran==8)?"byte":(taggran==32)?"word":"doubleword");
   printf("Optimizations: Locality %s, Read Allocate %s\n", (mapon==1)?"on":"off", (rdalloc==1)?"on":"off");
-  printf("Page Size=%u and Page Mask=%x\n", pagesize, pmask); 
 
   // initialize cache and local variables;
-  dl1 = new mtcache(l1sets, l1assoc, bsize, taggran, tagsize, (rdalloc==0)?1:0, l1delay, l2delay, l1_read_energy, l1_write_energy);
-  dl2 = new mtcache(l2sets, l2assoc, bsize, taggran, tagsize, rdalloc, l2delay, MEMDELAY, l2_read_energy, l2_write_energy);
+  dl1 = new tcache(l1sets, l1assoc, bsize, taggran, tagsize, l1_comp_wb, l1delay, l2delay, l1_read_energy, l1_write_energy);
+  dl2 = new tcache(l2sets, l2assoc, bsize, taggran, tagsize, l2_comp_wb, l2delay, MEMDELAY, l2_read_energy, l2_write_energy);
   mp = new mem_map(mapon, pagesize, bsize, 16, taggran, tagsize); // added enable (0-off,1-on)
 
   dl1->set_nl(dl2);
   dl2->set_mem(sp);
+  dl1->set_map(mp);
   dl2->set_map(mp);
-  dl1->set_name("CL1");
-  dl2->set_name("CL2");
+  dl1->set_name("ML1");
+  dl2->set_name("ML2");
 
   curr_ic = 0;
   warm_ic = 0;
@@ -65,7 +66,7 @@ coredrv::coredrv(core_args* args){
   temp_req = 0;
 }
 
-i32 coredrv::clock(){
+i32 mondrv::clock(){
   if ((curr_req.valid == 1) && (curr_req.inprogress == 1) && (curr_req.fill_cycle <= curr_ck)){
     curr_req.valid = 0;
   }
@@ -173,20 +174,20 @@ i32 coredrv::clock(){
       i64 sval;
       i32 zero;
       i32 delay = 1;
-      
-#ifdef CDBG
-      if (curr_req.addr == DBG_ADDR && fr == 0){
-	printf("Access (%u): (%s), addr (%x), value (%llx)\n", accesses, curr_req.isRead?"Read":"Write", curr_req.addr, curr_req.value);
-	fflush(stdout);
-      }
-#endif
 
       // reference the cache hierarchy
       if (mp != 0){
-	zero = mp->lookup(curr_req.addr & pmask);
+	zero = mp->lookup(curr_req.addr);
       }
       dl1->set_anum(accesses);
       dl2->set_anum(accesses);
+      
+#ifdef DBG
+      if (curr_req.addr == DBG_ADDR && fr == 0){
+	printf("Access (%u): (%s), addr (%x), value (%llx), mp(%x), zero(%u)\n", accesses, curr_req.isRead?"Trace Write":"Trace Read", curr_req.addr, curr_req.value, mp, zero);
+	fflush(stdout);
+      }
+#endif
       
       if (curr_req.isRead == 0){
 	sval = 0;
@@ -201,10 +202,10 @@ i32 coredrv::clock(){
 	    totaldelay += delay;
 	}
 	if (sval != curr_req.value && fr == 0){
-          //printf("Access(%u): Store and trace unmatched for addr (%X): s(%llX), t(%llX)\n", accesses, curr_req.addr, sval, curr_req.value);
-	  //assert(0);
+          printf("Access(%u): Store and trace unmatched for address (%X): sim(%llX), trace(%llX)\n", accesses, curr_req.addr, sval, curr_req.value);
+	  assert(0);
 	  // fix up to prevent later mismatches
-	  if ((sval == 0) && (rdalloc == 0)){
+	  /*if ((sval == 0) && (rdalloc == 0)){
 	    if (mp != 0 && mp->get_enabled()){
 	      mp->update_block(curr_req.addr, 1);
 	    }
@@ -217,7 +218,7 @@ i32 coredrv::clock(){
 	    dl1->set_hits(dl1->get_hits()-1);
 	    dl1->set_accs(dl1->get_accs()-1);
 	  }
-	  mismatches++;
+	  mismatches++;*/
 	}else{
 	  if (sval == 0 && zero == 0 && mp != 0 && mp->get_enabled()){
 	    mp->get_tlb()->zeros++;
@@ -227,6 +228,7 @@ i32 coredrv::clock(){
 	  mismaps++;
 	}
       }else{
+        // it's a write
 	if (zero == 0 && mp != 0 && mp->get_enabled() && rdalloc == 0){
 	  mp->update_block(curr_req.addr, 1);
 	  //printf("Calling cache_allocate for %08X\n", addr);
@@ -257,7 +259,7 @@ i32 coredrv::clock(){
   return 0;
 }
 
-void coredrv::stats(){
+void mondrv::stats(){
   printf("---------- %s performance data ----------\n", name);  
     
   if (mp != 0){
@@ -280,16 +282,17 @@ void coredrv::stats(){
     printf("%llu Queue full stall cycles\n", qstallcyc);
     printf("%llu Non-memory instructions in traces\n", totaligap);
   }
+  printf("Total Memory energy: %f Joules\n", mem_energy);
 }
 
-i32 coredrv::get_accs(){
+i32 mondrv::get_accs(){
   return accesses;
 }
 
-i64 coredrv::get_ic(){
+i64 mondrv::get_ic(){
   return curr_ic;
 }
 
-void coredrv::set_done(){
+void mondrv::set_done(){
   done = 1;
 }

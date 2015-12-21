@@ -116,8 +116,11 @@ i32 mem_map::lookup(i32 addr){
   tlb->total_energy += TLB1RE * (enabled+1); // read energy
   tlb->accs++;
 
-  //printf("Map lookup for addr: %X, hitway: %u, block: %u, bv: %X, result: %u\n", addr,  hitway, block, tlb->entries[hitway]->zero, ((tlb->entries[hitway]->zero >> block) & 1));
-  //printf("bshift: %u, bmask: %x\n", bshift, bmask);
+  /*#ifdef DBG
+  if (addr>>bshift == DBG_ADDR>>bshift){
+    printf("Lookup proceeding for address(%x) tag(%d) in map (%llx) returning %d\n", addr, tag, tlb->entries[hitway].entry->zero, zero);
+  }
+  #endif*/
 
   if (enabled == 0){
     // just model the TLB lookup
@@ -128,12 +131,6 @@ i32 mem_map::lookup(i32 addr){
   if (zero == 0){
     tlb->zeros++;
   }
-
-#ifdef DBG
-  if (addr == DBG_ADDR){
-    printf("Lookup proceeding for address(%x) tag(%d) in map (%llx) returning %d\n", addr, tag, tlb->entries[hitway].entry->zero, zero);
-  }
-#endif
 
   return zero;
 }
@@ -290,7 +287,7 @@ i32 mem_map::update_block(i32 addr, i32 zero){
 
 #ifdef DBG
   if (addr>>bshift == DBG_ADDR>>bshift){
-    printf("Update_block(%u) proceeding for address(%x) tag(%d) in map before(%llx) after(%llx)\n", zero, addr, tag, before, mapents[tag].zero);
+    printf("Update_block(%u) proceeding for address(%x) tag(%x) block(%x) in map before(%llx) after(%llx)\n", zero, addr, tag, block, before, mapents[tag].zero);
     }
 #endif
 

@@ -1,5 +1,5 @@
-#ifndef TCACHE_H
-#define TCACHE_H
+#ifndef MTCACHE_H
+#define MTCACHE_H
 
 #include "utils.h"
 #include "memmap.h"
@@ -9,14 +9,14 @@
 //#define LINETRACK 1
 
 // cache implementation
-typedef struct tcache_set
+typedef struct cache_set
 {
   cache_block* blks;
   plru* repl;
-} tcache_set;
+} mtcache_set;
 
-class tcache {
-  tcache_set* sets;
+class mtcache {
+  mtcache_set* sets;
   i32 compress_writeback;
   // modifications to support multi-granularity tags - 3/10/15
   i64 tmask;
@@ -35,7 +35,7 @@ class tcache {
   i32 bshift;
   i32 oshift;
   i32 amask;
-  i32 accs;
+  i64 accs;
   i64 hits;
   i64 misses;
   i64 writebacks;
@@ -44,7 +44,7 @@ class tcache {
   i32 anum;
   i32* acount;
   i32* mcount;
-  tcache* next_level;
+  mtcache* next_level;
   tmemory* mem;
   mem_map* map;
   char * name;
@@ -54,7 +54,7 @@ class tcache {
   float read_energy;
   float write_energy;
  public:
-  tcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 cw, i32 hd, i32 md, float re, float we);
+  mtcache(i32 ns, i32 as, i32 bs, i32 tg, i32 ts, i32 cw, i32 hd, i32 md, float re, float we);
   crdata read(i32 addr); // returns tuple of delay+data
   crdata readw(i32 addr); // returns tuple of delay+data
   i32 write(i32 addr, i64 data); // returns delay
@@ -67,7 +67,7 @@ class tcache {
   void clearstats();
   void set_mem(tmemory* sp);
   void set_map(mem_map* mp);
-  void set_nl(tcache* cp);
+  void set_nl(mtcache* cp);
   void set_name(char * cp);
   void set_anum(i32 n);
   i64 get_accs();
@@ -76,4 +76,4 @@ class tcache {
   void set_hits(i64 num);
 };
 
-#endif /* TCACHE_H */
+#endif /* MTCACHE_H */

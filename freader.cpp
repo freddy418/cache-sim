@@ -76,6 +76,11 @@ cache_req* freader::read_trace(){
     return NULL;
   }
 
+
+  if (req != NULL){
+
+  }
+
   return req;
 }
 

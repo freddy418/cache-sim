@@ -4,11 +4,12 @@
 #include "utils.h"
 
 typedef struct mem_page {
-  i64 data[512];
+  i64* data;
 } tpage;
 
 class tmemory {
   tpage** pages;
+  i32 pvals;
   i32 pmask;
   i32 fmask;
   i32 os;

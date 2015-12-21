@@ -1,39 +1,14 @@
-#ifndef COREDRV_H
-#define COREDRV_H
+#ifndef MONDRV_H
+#define MONDRV_H
 
 #include "utils.h"
 #include "store.h"
-#include "mtcache.h"
+#include "tcache.h"
 #include "memmap.h"
 #include "freader.h"
+#include "coredrv.h"
 
-typedef struct core_args_t {
-  i32 taggran;
-  i32 tagsize;
-  i32 pagesize;
-  i32 rdalloc;
-  i32 mapon;
-  i32 l1assoc;
-  i32 l1sets;
-  i32 l2assoc;
-  i32 l2sets;
-  i32 bsize;
-  i32 skip;
-  i32 l1delay;
-  i32 l2delay;
-  char * dir;
-  char * bench;
-  char * name;
-  std::queue<cache_req*>* qp;
-  tmemory* sp;
-  freader* fr;
-  float l1_read_energy;
-  float l1_write_energy;
-  float l2_read_energy;
-  float l2_write_energy;
-} core_args;
-
-class coredrv {
+class mondrv {
   i32 taggran;
   i32 tagsize;
   i32 mapon;
@@ -43,15 +18,14 @@ class coredrv {
   i32 l2assoc;
   i32 l2sets;
   i32 bsize;
-  i32 pmask;
   i32 skip;
   i32 pagesize;
   float l1_read_energy;
   float l1_write_energy;
   float l2_read_energy;
   float l2_write_energy;
-  mtcache* dl1;
-  mtcache* dl2;
+  tcache* dl1;
+  tcache* dl2;
   mem_map* mp;
   freader* fr;
   i32 done;
@@ -76,7 +50,7 @@ class coredrv {
   i64 totaldelay;
   cache_req* temp_req;
 public:
-  coredrv(core_args* args);
+  mondrv(core_args* args);
   void stats();
   i32 clock();
   i32 get_accs();
@@ -84,4 +58,4 @@ public:
   void set_done();
 };
 
-#endif /* COREDRV_H */
+#endif /* MONDRV_H */
