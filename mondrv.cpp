@@ -196,9 +196,9 @@ i32 mondrv::clock(){
 	    crdata rdata = dl1->read(curr_req.addr);
 	    sval = rdata.value;
 	    delay = rdata.delay;
-	    if (rdalloc == 0 && zero == 1){
+	    /*if (rdalloc == 0 && zero == 1){
 	      delay++; // additional delay when NDM-E bit misses
-	    }
+	      }*/
 	    totaldelay += delay;
 	}
 	if (sval != curr_req.value && fr == 0){
@@ -275,7 +275,7 @@ void mondrv::stats(){
   printf("%llu initialization mismatches encountered\n", mismatches);
   printf("%llu mapping mismatches encountered\n", mismaps);
   printf("%llu Total memory stall cycles: %f average memory delay\n", totaldelay, (float)(totaldelay)/(accesses-warm_accs));
-  printf("%u Null Bit updates on L1 write\n", nbupdates);
+  //printf("%u Null Bit updates on L1 write\n", nbupdates);
   if (fr != 0){
     printf("%llu instructions commmited in %llu cycles\n", curr_ic-warm_ic, clocks-warm_ck);
     printf("Simulated IPC: %1.3f\n", (float)(curr_ic-warm_ic)/(clocks-warm_ck));

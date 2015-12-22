@@ -303,20 +303,12 @@ i32 tcache::refill(cache_block* bp, i32 addr){
       if (i == 0){
 	delay = nld.delay;
       }
-      /*if (strcmp(name, "L1") == 0  && addr == 0){
-	printf("%X-%llX,", (addr&amask)+(i<<oshift), bp->value[i]);
-	}*/
     }
-    /*if (strcmp(name, "L1") == 0  && addr == 0){
-      printf("\n");
-      }*/
     next_level->accs -= (bvals-1);
     next_level->hits -= (bvals-1);
     bwused += bsize;
   }
   else if (mem != 0){
-    //printf("sets(%u), bsize(%u) - Refill from memory - addr(%08X), index(%u), tag(%X)\n", nsets, bsize, addr, index, tag);
-    //exit(1);
     zero = 1;
     if ((map != 0) && (map->get_enabled())){
       zero = map->lookup(addr);
@@ -365,12 +357,6 @@ crdata tcache::read(i32 addr){
   if (tsize != 64){
     ret.value = (ret.value >> (tagindex << tshift)) & tgmask;
   }
-
-  /*
-#ifdef TEST
-  printf("%s Reading (%llx) from addr (%x)\n", name, ret, addr);
-#endif
-  */
 
   // this is a mux, no need to model energy
   return ret;
