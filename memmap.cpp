@@ -54,7 +54,7 @@ mem_map::mem_map(i32 en, i32 ps, i32 bs, i32 cs, i32 tg, i32 ts){
 
   // create the l2 map tlb
   tlb2 = new mm_cache();
-  tlb2->nents = cs << 3;
+  tlb2->nents = cs << 2;
   tlb2->total_energy = 0;
   tlb2->accs = 0;
   tlb2->hits = 0;

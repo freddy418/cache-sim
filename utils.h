@@ -28,9 +28,9 @@ extern float mem_energy;
 #define CL2DELAY 10
 // metadata caches
 #define ML1DELAY 1
-#define ML2DELAY 8
+#define ML2DELAY 8+ML1DELAY
 // memory
-#define MEMDELAY 200
+#define MEMDELAY 200+ML2DELAY+ML1DELAY
 
 // cache energies
 // TLB reads
@@ -53,8 +53,14 @@ extern float mem_energy;
 #define MEMRE 4e-9 // todo: what's typ dram read energy?
 #define MEMWE 4e-9 // todo: what's typ dram read energy?
 
-#define QSIZE 16
+#define QSIZE 32
 #define PSIZE 12 // log2 of page size in bytes
+
+#define NDM_HIT 0
+#define L1_HIT  1
+#define L2_HIT  2
+#define MEM_HIT 3
+#define MEM_LVLS 4
 
 // lru implementation
 typedef struct llnode {
@@ -76,6 +82,7 @@ typedef struct crdata_t
 {
   i64 value;
   i32 delay;
+  i32 level;
 } crdata;
 
 typedef struct cache_req_t

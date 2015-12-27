@@ -48,6 +48,7 @@ class mondrv {
   i32 warm_accs;
   i64 clocks;
   i64 totaldelay;
+  i32 delays[MEM_LVLS];
   cache_req* temp_req;
 public:
   mondrv(core_args* args);

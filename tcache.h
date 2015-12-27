@@ -59,7 +59,7 @@ class tcache {
   crdata readw(i32 addr); // returns tuple of delay+data
   i32 write(i32 addr, i64 data); // returns delay
   void writeback(cache_block* bp, i32 addr);
-  i32 refill(cache_block* bp, i32 addr); // returns delay (of next level)
+  crdata refill(cache_block* bp, i32 addr); // returns delay (of next level)
   void stats();
   void copy(i32 addr, cache_block* op);
   void allocate(i32 addr);

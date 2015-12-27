@@ -32,6 +32,9 @@ mondrv::mondrv(core_args* args){
   accesses = 0;
   // cache delay counters
   totaldelay = 0;
+  for (int i=0;i<MEM_LVLS;i++){
+    delays[i] = 0;
+  }
   nbupdates = 0;
   // misc stall counters
   qstallcyc = 0;
@@ -141,15 +144,25 @@ i32 mondrv::clock(){
       }
       if (fr != 0){
 	printf("%s warmup completed at %u accesses and %llu instructions\n", name, accesses, curr_ic);
+	// reset statistics collected during warm up for core
 	warm_ic = curr_ic;
 	warm_ck = curr_ck;
 	warm_accs = accesses;
 	qstallcyc = 0;
 	totaligap = 0;
-	totaldelay = 0;
+	totaldelay = 0;	
+	for (int i=0;i<MEM_LVLS;i++){
+	  delays[i] = 0;
+	}
 	nbupdates = 0;
       }else{
 	printf("%s warmup completed at %u accesses\n", name, accesses);
+	// reset statistics collected during warm up for monitor
+	warm_accs = accesses;
+	totaldelay = 0;
+	for (int i=0;i<MEM_LVLS;i++){
+	  delays[i] = 0;
+	}
       }
     }
   }
@@ -200,12 +213,17 @@ i32 mondrv::clock(){
 	      delay++; // additional delay when NDM-E bit misses
 	      }*/
 	    totaldelay += delay;
+	    delays[rdata.level] += delay;
+	}else{
+	  // access hit in NDM
+	  totaldelay += delay;
+	  delays[NDM_HIT] += delay;
 	}
 	if (sval != curr_req.value && fr == 0){
-          printf("Access(%u): Store and trace unmatched for address (%X): sim(%llX), trace(%llX)\n", accesses, curr_req.addr, sval, curr_req.value);
-	  assert(0);
+          //printf("Access(%u): Store and trace unmatched for address (%X): sim(%llX), trace(%llX)\n", accesses, curr_req.addr, sval, curr_req.value);
+	  //assert(0);
 	  // fix up to prevent later mismatches
-	  /*if ((sval == 0) && (rdalloc == 0)){
+	  if ((sval == 0) && (rdalloc == 0)){
 	    if (mp != 0 && mp->get_enabled()){
 	      mp->update_block(curr_req.addr, 1);
 	    }
@@ -218,7 +236,7 @@ i32 mondrv::clock(){
 	    dl1->set_hits(dl1->get_hits()-1);
 	    dl1->set_accs(dl1->get_accs()-1);
 	  }
-	  mismatches++;*/
+	  mismatches++;
 	}else{
 	  if (sval == 0 && zero == 0 && mp != 0 && mp->get_enabled()){
 	    mp->get_tlb()->zeros++;
@@ -236,6 +254,7 @@ i32 mondrv::clock(){
 	  nbupdates++;
 	}
 	totaldelay += delay; // writes have a 1 cycle delay
+	delays[L1_HIT] += delay;
 	dl1->write(curr_req.addr, curr_req.value); // this needs to return a delay?
       }
       curr_req.fill_cycle = curr_ck + delay - 1;
@@ -272,9 +291,14 @@ void mondrv::stats(){
     dl2->stats();
   }
   
+  printf("Memory accesses: %u total, %u before warmup, %u simulated\n", accesses, warm_accs, accesses-warm_accs);
   printf("%llu initialization mismatches encountered\n", mismatches);
   printf("%llu mapping mismatches encountered\n", mismaps);
   printf("%llu Total memory stall cycles: %f average memory delay\n", totaldelay, (float)(totaldelay)/(accesses-warm_accs));
+  printf("Access delays by level:\n");
+  for (int i=0;i<MEM_LVLS;i++){
+    printf("Level %d: total delay %u, %f contribution to average delay\n", i, delays[i], (float)(delays[i])/(accesses-warm_accs));
+  }
   //printf("%u Null Bit updates on L1 write\n", nbupdates);
   if (fr != 0){
     printf("%llu instructions commmited in %llu cycles\n", curr_ic-warm_ic, clocks-warm_ck);

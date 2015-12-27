@@ -279,8 +279,9 @@ void tcache::copy(i32 addr, cache_block* op){
   total_energy += write_energy * bvals;
 }
 
-i32 tcache::refill(cache_block* bp, i32 addr){
-  i32 i, index, tag, zero, delay;
+crdata tcache::refill(cache_block* bp, i32 addr){
+  i32 i, index, tag, zero;
+  crdata refill_data;
   tag = (addr >> (bshift + ishift)); 
   index = (addr >> bshift) & imask;
   zero = 1;
@@ -301,7 +302,8 @@ i32 tcache::refill(cache_block* bp, i32 addr){
       crdata nld = next_level->readw((addr&amask)+(i<<oshift));
       bp->value[i] = nld.value;
       if (i == 0){
-	delay = nld.delay;
+	refill_data.delay = nld.delay;
+	refill_data.level = nld.level;
       }
     }
     next_level->accs -= (bvals-1);
@@ -326,9 +328,10 @@ i32 tcache::refill(cache_block* bp, i32 addr){
       }
       bwused += bsize;
       mem_energy += MEMRE;
-      delay = mem->load();
+      refill_data.delay = mem->load();
+      refill_data.level = MEM_HIT;
       if ((map != 0) && (map->get_enabled())){
-	delay++; // extra cycle to read NDM bit
+	refill_data.delay++; // extra cycle to read NDM bit
       }
     }else{
       for (i=0;i<bvals;i++){
@@ -340,13 +343,14 @@ i32 tcache::refill(cache_block* bp, i32 addr){
         }
 #endif
       }
-      delay = hitdelay;
+      refill_data.delay = hitdelay;
+      refill_data.level = L2_HIT;
     }
   }
   //printf("block size: %d, index: %d, addr: %X, bmask: %X\n", (bsize), (addr>>bshift)&(bmask), addr, bmask);
 
   total_energy += write_energy * bvals;
-  return delay;
+  return refill_data;
 }
 
 crdata tcache::read(i32 addr){ 
@@ -392,6 +396,11 @@ crdata tcache::readw(i32 addr){
     hits++;
     block = &(sets[index].blks[hitway]);
     ret.delay = hitdelay;
+    if (next_level != 0){
+      ret.level = L1_HIT;
+    }else{
+      ret.level = L2_HIT;
+    }
   }else{
     misses++;    
     hitway = sets[index].repl->get_lru();
@@ -404,9 +413,11 @@ crdata tcache::readw(i32 addr){
 	next_level->touch(addr);
 	}*/
       wbaddr = ((block->tag)<<(ishift+bshift)) + (index<<bshift);
-      this->writeback(block, wbaddr);
+      writeback(block, wbaddr);
     }
-    ret.delay = this->refill(block, addr);
+    crdata refill_data = refill(block, addr);
+    ret.delay = refill_data.delay;
+    ret.level = refill_data.level;
   }  
   ret.value = block->value[pos];
 
@@ -470,7 +481,8 @@ i32 tcache::write(i32 addr, i64 data){
       wbaddr =  ((block->tag)<<(ishift+bshift)) + (index<<bshift);
       this->writeback(block, wbaddr);
     }
-    delay = this->refill(block, addr);
+    crdata refill_data = this->refill(block, addr);
+    delay = refill_data.delay;
   }
 
 #ifdef DBG
