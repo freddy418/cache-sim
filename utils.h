@@ -24,8 +24,8 @@ extern float mem_energy;
 
 // cache latencies
 // core caches
-#define CL1DELAY 2
-#define CL2DELAY 10
+#define CL1DELAY 3
+#define CL2DELAY 15
 // metadata caches
 #define ML1DELAY 1
 #define ML2DELAY 8+ML1DELAY

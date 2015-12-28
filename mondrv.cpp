@@ -70,7 +70,7 @@ mondrv::mondrv(core_args* args){
 }
 
 i32 mondrv::clock(){
-  if ((curr_req.valid == 1) && (curr_req.inprogress == 1) && (curr_req.fill_cycle <= curr_ck)){
+  if ((curr_req.valid == 1) && (curr_req.inprogress == 1) && (curr_req.fill_cycle < curr_ck)){
     curr_req.valid = 0;
   }
   // model 1 cycle queue delay
@@ -212,11 +212,9 @@ i32 mondrv::clock(){
 	    /*if (rdalloc == 0 && zero == 1){
 	      delay++; // additional delay when NDM-E bit misses
 	      }*/
-	    totaldelay += delay;
 	    delays[rdata.level] += delay;
 	}else{
 	  // access hit in NDM
-	  totaldelay += delay;
 	  delays[NDM_HIT] += delay;
 	}
 	if (sval != curr_req.value && fr == 0){
@@ -253,10 +251,11 @@ i32 mondrv::clock(){
 	  dl1->allocate(curr_req.addr); // special function to allocate a cache line with all zero
 	  nbupdates++;
 	}
-	totaldelay += delay; // writes have a 1 cycle delay
-	delays[L1_HIT] += delay;
 	dl1->write(curr_req.addr, curr_req.value); // this needs to return a delay?
+	delay = ML1DELAY;
+	delays[L1_HIT] += delay;
       }
+      totaldelay += delay; // writes have a 1 cycle delay
       curr_req.fill_cycle = curr_ck + delay - 1;
       curr_req.inprogress = 1;
 

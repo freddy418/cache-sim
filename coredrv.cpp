@@ -66,7 +66,7 @@ coredrv::coredrv(core_args* args){
 }
 
 i32 coredrv::clock(){
-  if ((curr_req.valid == 1) && (curr_req.inprogress == 1) && (curr_req.fill_cycle <= curr_ck)){
+  if ((curr_req.valid == 1) && (curr_req.inprogress == 1) && (curr_req.fill_cycle < curr_ck)){
     curr_req.valid = 0;
   }
   // model 1 cycle queue delay
@@ -128,9 +128,6 @@ i32 coredrv::clock(){
     if ((fr == 0 && curr_req.valid == 1) || (fr != 0)){
       accesses++;
     }
-    /*if (fr!=0 && accesses % 1000000 == 0){
-      fprintf(stderr, "Now at %u accesses in the monitored application\n", accesses);
-      }*/
     if (accesses == skip){
       mem_energy = 0;
       dl1->clearstats();
@@ -198,7 +195,6 @@ i32 coredrv::clock(){
 	    if (rdalloc == 0 && zero == 1){
 	      delay++; // additional delay when NDM-E bit misses
 	    }
-	    totaldelay += delay;
 	}
 	if (sval != curr_req.value && fr == 0){
           //printf("Access(%u): Store and trace unmatched for addr (%X): s(%llX), t(%llX)\n", accesses, curr_req.addr, sval, curr_req.value);
@@ -233,9 +229,11 @@ i32 coredrv::clock(){
 	  dl1->allocate(curr_req.addr); // special function to allocate a cache line with all zero
 	  nbupdates++;
 	}
-	totaldelay += delay; // writes have a 1 cycle delay
 	dl1->write(curr_req.addr, curr_req.value); // this needs to return a delay?
+	delay = CL1DELAY;
       }
+
+      totaldelay += delay;
       curr_req.fill_cycle = curr_ck + delay - 1;
       curr_req.inprogress = 1;
 

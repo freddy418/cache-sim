@@ -423,7 +423,7 @@ crdata tcache::readw(i32 addr){
 
 #ifdef DBG
   if (addr == DBG_ADDR){
-    printf("Access (%u): %s Reading (%llx) from addr (%x) in index(%u), way(%u), pos(%u)\n", accs, name, ret.value, addr, index, hitway, pos);
+    printf("Access (%u): %s Reading (%llx) from addr (%x) in index(%u), way(%u), pos(%u), lvl(%u), delay(%u)\n", accs, name, ret.value, addr, index, hitway, pos, ret.level, ret.delay);
   }
 #endif
   
@@ -479,7 +479,7 @@ i32 tcache::write(i32 addr, i64 data){
 	next_level->touch(addr);
 	}*/
       wbaddr =  ((block->tag)<<(ishift+bshift)) + (index<<bshift);
-      this->writeback(block, wbaddr);
+      writeback(block, wbaddr);
     }
     crdata refill_data = this->refill(block, addr);
     delay = refill_data.delay;
